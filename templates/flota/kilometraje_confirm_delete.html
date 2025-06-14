@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>¿Eliminar registro de kilometraje?</h2>
+    <div class="alert alert-warning">Esta acción no se puede deshacer.</div>
+    <table class="table table-bordered mt-3">
+        <tr><th>Vehículo</th><td>{{ kilometraje.vehiculo }}</td></tr>
+        <tr><th>Kilometraje</th><td>{{ kilometraje.kilometraje|intcomma }} km</td></tr>
+        <tr><th>Tipo Evento</th><td>{{ kilometraje.get_tipo_evento_display }}</td></tr>
+        <tr><th>Fecha</th><td>{{ kilometraje.fecha|date:'d/m/Y H:i' }}</td></tr>
+    </table>
+    <form method="post">
+        {% csrf_token %}
+        <a href="{% url 'flota:lista_kilometrajes' %}" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-danger">Eliminar</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Detalle de Kilometraje</h2>
+    <table class="table table-bordered mt-3">
+        <tr><th>Vehículo</th><td>{{ kilometraje.vehiculo }}</td></tr>
+        <tr><th>Kilometraje</th><td>{{ kilometraje.kilometraje|intcomma }} km</td></tr>
+        <tr><th>Tipo Evento</th><td>{{ kilometraje.get_tipo_evento_display }}</td></tr>
+        <tr><th>Fecha</th><td>{{ kilometraje.fecha|date:'d/m/Y H:i' }}</td></tr>
+        <tr><th>Usuario</th><td>{{ kilometraje.usuario }}</td></tr>
+        <tr><th>Cliente</th><td>{{ kilometraje.cliente }}</td></tr>
+        <tr><th>Estado General</th><td>{{ kilometraje.estado_general }}</td></tr>
+        <tr><th>Subestado</th><td>{{ kilometraje.subestado }}</td></tr>
+        <tr><th>Observaciones</th><td>{{ kilometraje.observaciones|default:'-' }}</td></tr>
+    </table>
+    <a href="{% url 'flota:editar_kilometraje' kilometraje.pk %}" class="btn btn-warning">Editar</a>
+    <a href="{% url 'flota:eliminar_kilometraje' kilometraje.pk %}" class="btn btn-danger">Eliminar</a>
+    <a href="{% url 'flota:lista_kilometrajes' %}" class="btn btn-secondary">Volver al listado</a>
+</div>
+{% endblock %}

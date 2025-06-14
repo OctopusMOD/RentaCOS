@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Reserva - RentaCOS{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0">Eliminar Reserva</h4>
+        </div>
+        <div class="card-body">
+            <p>
+                ¿Estás seguro de que deseas eliminar la reserva <strong>#{{ reserva.id }}</strong> 
+                de <strong>
+                {% if reserva.cliente.tipo_cliente == "EMPRESA" %}
+                    {{ reserva.cliente.razon_social }}
+                {% else %}
+                    {{ reserva.cliente.nombre_contacto }} {{ reserva.cliente.apellidos_contacto }}
+                {% endif %}
+                </strong>?
+            </p>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fa fa-trash"></i> Sí, eliminar
+                </button>
+                <a href="{% url 'alquiler:reserva_list' %}" class="btn btn-secondary">
+                    <i class="fa fa-times"></i> Cancelar
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

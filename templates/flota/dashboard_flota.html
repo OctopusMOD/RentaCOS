@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Dashboard de Flota</h2>
+    <div class="row g-4">
+        <div class="col-md-2"><div class="card text-center">
+            <div class="card-header">Total Vehículos</div>
+            <div class="card-body display-5">{{ total_vehiculos }}</div>
+        </div></div>
+        <div class="col-md-2"><div class="card text-center">
+            <div class="card-header">Disponibles</div>
+            <div class="card-body display-5 text-success">{{ vehiculos_disponibles }}</div>
+        </div></div>
+        <div class="col-md-2"><div class="card text-center">
+            <div class="card-header">En Arriendo</div>
+            <div class="card-body display-5 text-primary">{{ vehiculos_arriendo }}</div>
+        </div></div>
+        <div class="col-md-2"><div class="card text-center">
+            <div class="card-header">En Taller</div>
+            <div class="card-body display-5 text-warning">{{ vehiculos_taller }}</div>
+        </div></div>
+        <div class="col-md-2"><div class="card text-center">
+            <div class="card-header">Próx. Mant.</div>
+            <div class="card-body display-5 text-warning">{{ vehiculos_prox_mant }}</div>
+        </div></div>
+        <div class="col-md-2"><div class="card text-center">
+            <div class="card-header">Mant. Atrasado</div>
+            <div class="card-body display-5 text-danger">{{ vehiculos_mant_atrasado }}</div>
+        </div></div>
+    </div>
+    <div class="row g-4 mt-4">
+        <div class="col-md-6"><div class="card">
+            <div class="card-header">Vehículos con documentos por vencer</div>
+            <div class="card-body display-6 text-warning">{{ docs_por_vencer }}</div>
+        </div></div>
+        <div class="col-md-6"><div class="card">
+            <div class="card-header">Vehículos con documentos vencidos</div>
+            <div class="card-body display-6 text-danger">{{ docs_vencidos }}</div>
+        </div></div>
+    </div>
+    <div class="row g-4 mt-4">
+        <div class="col-12"><div class="card">
+            <div class="card-header">Últimos 5 Movimientos de Kilometraje</div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr>
+                        <th>Vehículo</th>
+                        <th>Kilometraje</th>
+                        <th>Fecha</th>
+                        <th>Usuario</th>
+                    </tr></thead>
+                    <tbody>
+                        {% for k in ultimos_kilometrajes %}
+                        <tr>
+                            <td>{{ k.vehiculo }}</td>
+                            <td>{{ k.kilometraje }}</td>
+                            <td>{{ k.fecha|date:"d/m/Y H:i" }}</td>
+                            <td>{{ k.usuario.get_full_name|default:k.usuario.username }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4">Sin movimientos recientes.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div></div>
+    </div>
+    <div class="row g-4 mt-4">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <i class="fa fa-exclamation-triangle"></i> Vehículos con Alertas Críticas
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Patente</th>
+                                <th>Estado</th>
+                                <th>Subestado</th>
+                                <th>SOAP vence</th>
+                                <th>RT vence</th>
+                                <th>Permiso circ. vence</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in alertas_criticas %}
+                            <tr>
+                                <td>{{ v.patente }}</td>
+                                <td>{{ v.get_estado_general_display }}</td>
+                                <td>
+                                    {% if v.subestado == 'MANTENIMIENTO_ATRASADO' %}
+                                        <span class="badge bg-danger">{{ v.get_subestado_display }}</span>
+                                    {% elif v.subestado == 'PROX_MANTENIMIENTO' %}
+                                        <span class="badge bg-warning text-dark">{{ v.get_subestado_display }}</span>
+                                    {% else %}
+                                        {{ v.get_subestado_display }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if v.fecha_vencimiento_soap and v.fecha_vencimiento_soap < today %}
+                                        <span class="text-danger fw-bold">{{ v.fecha_vencimiento_soap|date:"d/m/Y" }}</span>
+                                    {% elif v.fecha_vencimiento_soap and v.fecha_vencimiento_soap <= today|add:'30' %}
+                                        <span class="text-warning">{{ v.fecha_vencimiento_soap|date:"d/m/Y" }}</span>
+                                    {% else %}
+                                        {{ v.fecha_vencimiento_soap|date:"d/m/Y" }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if v.fecha_vencimiento_rev_tecnica and v.fecha_vencimiento_rev_tecnica < today %}
+                                        <span class="text-danger fw-bold">{{ v.fecha_vencimiento_rev_tecnica|date:"d/m/Y" }}</span>
+                                    {% elif v.fecha_vencimiento_rev_tecnica and v.fecha_vencimiento_rev_tecnica <= today|add:'30' %}
+                                        <span class="text-warning">{{ v.fecha_vencimiento_rev_tecnica|date:"d/m/Y" }}</span>
+                                    {% else %}
+                                        {{ v.fecha_vencimiento_rev_tecnica|date:"d/m/Y" }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if v.fecha_vencimiento_permiso_circulacion and v.fecha_vencimiento_permiso_circulacion < today %}
+                                        <span class="text-danger fw-bold">{{ v.fecha_vencimiento_permiso_circulacion|date:"d/m/Y" }}</span>
+                                    {% elif v.fecha_vencimiento_permiso_circulacion and v.fecha_vencimiento_permiso_circulacion <= today|add:'30' %}
+                                        <span class="text-warning">{{ v.fecha_vencimiento_permiso_circulacion|date:"d/m/Y" }}</span>
+                                    {% else %}
+                                        {{ v.fecha_vencimiento_permiso_circulacion|date:"d/m/Y" }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'flota:vehiculo_detail' v.id %}" class="btn btn-sm btn-outline-danger">Ver</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="7" class="text-center">No hay alertas críticas en este momento.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

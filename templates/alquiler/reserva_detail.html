@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}Reserva #{{ reserva.id }} - RentaCOS{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h3 class="card-title mb-0">Detalle de Reserva #{{ reserva.id }}</h3>
+            <div>
+                {% if not reserva.contrato %}
+                    {% if reserva.estado == 'PENDIENTE' %}
+                        <a href="{% url 'alquiler:reserva_confirmar' reserva.pk %}" class="btn btn-success btn-sm">Confirmar</a>
+                        <a href="{% url 'alquiler:reserva_cancelar' reserva.pk %}" class="btn btn-danger btn-sm">Cancelar</a>
+                        <a href="{% url 'alquiler:reserva_update' reserva.pk %}" class="btn btn-warning btn-sm"><i class="fa fa-edit"></i> Editar</a>
+                        <a href="{% url 'alquiler:reserva_delete' reserva.pk %}" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i> Eliminar</a>
+                    {% elif reserva.estado == 'CONFIRMADA' %}
+                        <a href="{% url 'alquiler:contrato_create' %}?reserva={{ reserva.pk }}" class="btn btn-primary btn-sm"><i class="fa fa-file-signature"></i> Generar Contrato</a>
+                        <a href="{% url 'alquiler:reserva_cancelar' reserva.pk %}" class="btn btn-danger btn-sm">Cancelar</a>
+                    {% endif %}
+                {% endif %}
+                <a href="{% url 'alquiler:reserva_list' %}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Volver</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h4>Información del Cliente</h4>
+                <table class="table">
+                    <tr>
+                        <th>Nombre:</th>
+                        <td>
+                            {% if reserva.cliente.tipo_cliente == "EMPRESA" %}
+                                {{ reserva.cliente.razon_social }}
+                            {% else %}
+                                {{ reserva.cliente.nombre_contacto }} {{ reserva.cliente.apellidos_contacto }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Documento:</th>
+                        <td>
+                            {% if reserva.cliente.tipo_cliente == "EMPRESA" %}
+                                RUT: {{ reserva.cliente.rut_empresa }}
+                            {% else %}
+                                {{ reserva.cliente.get_tipo_documento_display }} {{ reserva.cliente.numero_documento }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Teléfono:</th>
+                        <td>
+                            {% if reserva.cliente.tipo_cliente == "EMPRESA" %}
+                                {{ reserva.cliente.telefono_empresa }}
+                            {% else %}
+                                {{ reserva.cliente.telefono_contacto }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            {#
+            <div class="col-md-6">
+                <h4>Información del Vehículo</h4>
+                <table class="table">
+                    <tr>
+                        <th>Vehículo:</th>
+                        <td>{{ reserva.vehiculo }}</td>
+                    </tr>
+                    <tr>
+                        <th>Placa:</th>
+                        <td>{{ reserva.vehiculo.placa }}</td>
+                    </tr>
+                    <tr>
+                        <th>Tarifa Diaria:</th>
+                        <td>S/. {{ reserva.vehiculo.tarifa_diaria }}</td>
+                    </tr>
+                </table>
+            </div>
+            #}
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <h4>Detalles de la Reserva</h4>
+                <table class="table">
+                    <tr>
+                        <th>Fecha Inicio:</th>
+                        <td>{{ reserva.fecha_inicio|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Fecha Fin:</th>
+                        <td>{{ reserva.fecha_fin|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Estado:</th>
+                        <td>
+                            <span class="badge bg-{% if reserva.estado == 'CONFIRMADA' %}success{% elif reserva.estado == 'PENDIENTE' %}warning{% elif reserva.estado == 'CANCELADA' %}danger{% else %}info{% endif %}">
+                                {{ reserva.get_estado_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Monto Total:</th>
+                        <td>S/. {{ reserva.monto_total }}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h4>Observaciones</h4>
+                <div class="card">
+                    <div class="card-body">
+                        {% if reserva.observaciones %}
+                        {{ reserva.observaciones|linebreaks }}
+                        {% else %}
+                        <p class="text-muted">Sin observaciones</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if reserva.contrato %}
+        <div class="mt-4">
+            <h4>Contrato</h4>
+            <table class="table">
+                <tr>
+                    <th>Número de Contrato:</th>
+                    <td>
+                        <a href="{% url 'alquiler:contrato_detail' reserva.contrato.pk %}">{{ reserva.contrato.numero_contrato }}</a>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Estado:</th>
+                    <td>{{ reserva.contrato.get_estado_display }}</td>
+                </tr>
+                <tr>
+                    <th>Fecha de Firma:</th>
+                    <td>{{ reserva.contrato.fecha_firma|date:"d/m/Y H:i"|default:"No firmado" }}</td>
+                </tr>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if reserva.factura %}
+        <div class="mt-4">
+            <h4>Factura</h4>
+            <table class="table">
+                <tr>
+                    <th>Número de Factura:</th>
+                    <td>{{ reserva.factura.numero_factura }}</td>
+                </tr>
+                <tr>
+                    <th>Estado:</th>
+                    <td>{{ reserva.factura.get_estado_display }}</td>
+                </tr>
+                <tr>
+                    <th>Monto:</th>
+                    <td>S/. {{ reserva.factura.total }}</td>
+                </tr>
+            </table>
+        </div>
+        {% endif %}
+
+        <a href="{% url 'alquiler:reserva_list' %}" class="btn btn-outline-secondary mt-2">
+          <i class="fa fa-arrow-left"></i> Volver al listado
+        </a>
+    </div>
+</div>
+{% endblock %}

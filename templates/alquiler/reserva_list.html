@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Reservas - RentaCOS{% endblock %}
+
+{% block content %}
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {% if message.tags == "success" %}
+        <i class="fa fa-check-circle me-1"></i>
+      {% elif message.tags == "warning" %}
+        <i class="fa fa-exclamation-triangle me-1"></i>
+      {% elif message.tags == "error" or message.tags == "danger" %}
+        <i class="fa fa-times-circle me-1"></i>
+      {% else %}
+        <i class="fa fa-info-circle me-1"></i>
+      {% endif %}
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Reservas</h2>
+    <a href="{% url 'alquiler:reserva_create' %}" class="btn btn-primary">
+        <i class="fa fa-plus"></i> Nueva Reserva
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <form method="get" class="row row-cols-lg-auto g-2 align-items-center">
+            {% for field in filter.form.visible_fields %}
+                <div class="col">
+                    {{ field|as_crispy_field }}
+                </div>
+            {% endfor %}
+            <div class="col">
+                <button type="submit" class="btn btn-secondary">
+                    <i class="fa fa-search"></i> Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cliente</th>
+                        <th>Fecha Inicio</th>
+                        <th>Fecha Fin</th>
+                        <th>Estado</th>
+                        <th>Monto</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reserva in reservas %}
+                    <tr>
+                        <td>{{ reserva.id }}</td>
+                        <td>
+                            {% if reserva.cliente.tipo_cliente == "EMPRESA" %}
+                                {{ reserva.cliente.razon_social }}
+                            {% else %}
+                                {{ reserva.cliente.nombre_contacto }} {{ reserva.cliente.apellidos_contacto }}
+                            {% endif %}
+                        </td>
+                        <td>{{ reserva.fecha_inicio|date:"d/m/Y H:i" }}</td>
+                        <td>{{ reserva.fecha_fin|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <span class="badge bg-{% if reserva.estado == 'CONFIRMADA' %}success{% elif reserva.estado == 'PENDIENTE' %}warning{% elif reserva.estado == 'CANCELADA' %}danger{% else %}info{% endif %}">
+                                {{ reserva.get_estado_display }}
+                            </span>
+                        </td>
+                        <td>S/. {{ reserva.monto_total }}</td>
+                        <td class="d-flex gap-2">
+                            <a href="{% url 'alquiler:reserva_detail' reserva.pk %}" class="btn btn-sm btn-info" title="Ver">
+                                <i class="fa fa-eye"></i>
+                            </a>
+                            <a href="{% url 'alquiler:reserva_update' reserva.pk %}" class="btn btn-sm btn-warning" title="Editar">
+                                <i class="fa fa-edit"></i>
+                            </a>
+                            <a href="{% url 'alquiler:reserva_delete' reserva.pk %}" class="btn btn-sm btn-danger" title="Eliminar">
+                                <i class="fa fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No hay reservas registradas.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if reservas.has_other_pages %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% if reservas.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ reservas.previous_page_number }}"> <i class="fa fa-chevron-left"></i> </a>
+                </li>
+                {% endif %}
+
+                {% for num in reservas.paginator.page_range %}
+                    {% if reservas.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if reservas.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ reservas.next_page_number }}"> <i class="fa fa-chevron-right"></i> </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Historial de Kilometraje - {{ vehiculo }}</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Kilometraje</th>
+            <th>Evento</th>
+            <th>Cliente</th>
+            <th>Usuario</th>
+            <th>Estado</th>
+            <th>Subestado</th>
+            <th>Observaciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for k in historial %}
+        <tr>
+            <td>{{ k.fecha|date:"Y-m-d H:i" }}</td>
+            <td>{{ k.kilometraje }}</td>
+            <td>{{ k.get_tipo_evento_display }}</td>
+            <td>{{ k.cliente }}</td>
+            <td>{{ k.usuario }}</td>
+            <td>{{ k.estado_general }}</td>
+            <td>{{ k.subestado }}</td>
+            <td>{{ k.observaciones }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center">No hay registros.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a href="{% url 'flota:kilometraje_registrar' %}?vehiculo={{ vehiculo.id }}" class="btn btn-success">Registrar nuevo kilometraje</a>
+<a href="{% url 'flota:kilometraje_historial_completo' vehiculo.id %}" class="btn btn-secondary mt-2">
+    Ver historial completo
+</a>
+{% endblock %}

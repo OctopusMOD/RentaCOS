@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Facturas - RentaCOS{% endblock %}
+
+{% block content %}
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {% if message.tags == "success" %}
+        <i class="fa fa-check-circle me-1"></i>
+      {% elif message.tags == "warning" %}
+        <i class="fa fa-exclamation-triangle me-1"></i>
+      {% elif message.tags == "error" or message.tags == "danger" %}
+        <i class="fa fa-times-circle me-1"></i>
+      {% else %}
+        <i class="fa fa-info-circle me-1"></i>
+      {% endif %}
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Facturas</h2>
+    <a href="{% url 'alquiler:factura_create' %}" class="btn btn-primary">
+        <i class="fa fa-plus"></i> Nueva Factura
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <form method="get" class="row row-cols-lg-auto g-2 align-items-center">
+            {% for field in filter.form %}
+                <div class="col">
+                    {{ field|as_crispy_field }}
+                </div>
+            {% endfor %}
+            <div class="col">
+                <button type="submit" class="btn btn-secondary">
+                    <i class="fa fa-search"></i> Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th>N° Factura</th>
+                    <th>Cliente</th>
+                    <th>Emisión</th>
+                    <th>Vencimiento</th>
+                    <th>Estado</th>
+                    <th>Total</th>
+                    <th>Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for factura in facturas %}
+                    <tr>
+                        <td>{{ factura.numero_factura }}</td>
+                        <td>
+                            {% if factura.contrato and factura.contrato.reserva and factura.contrato.reserva.cliente %}
+                                {% if factura.contrato.reserva.cliente.tipo_cliente == "EMPRESA" %}
+                                    {{ factura.contrato.reserva.cliente.razon_social }}
+                                {% else %}
+                                    {{ factura.contrato.reserva.cliente.nombre_contacto }} {{ factura.contrato.reserva.cliente.apellidos_contacto }}
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">Sin cliente</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ factura.fecha_emision|date:"d/m/Y H:i" }}</td>
+                        <td>{{ factura.fecha_vencimiento|date:"d/m/Y" }}</td>
+                        <td>
+                            <span class="badge bg-{% if factura.estado == 'PAGADA' %}success{% elif factura.estado == 'EMITIDA' %}warning{% elif factura.estado == 'ANULADA' %}danger{% else %}info{% endif %}">
+                                {{ factura.get_estado_display }}
+                            </span>
+                        </td>
+                        <td>S/. {{ factura.total }}</td>
+                        <td class="d-flex gap-2">
+                            <a href="{% url 'alquiler:factura_detail' factura.pk %}" class="btn btn-sm btn-info" title="Ver">
+                                <i class="fa fa-eye"></i>
+                            </a>
+                            <a href="{% url 'alquiler:factura_update' factura.pk %}" class="btn btn-sm btn-warning" title="Editar">
+                                <i class="fa fa-edit"></i>
+                            </a>
+                            <a href="{% url 'alquiler:factura_delete' factura.pk %}" class="btn btn-sm btn-danger" title="Eliminar">
+                                <i class="fa fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No hay facturas registradas.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if facturas.has_other_pages %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% if facturas.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ facturas.previous_page_number }}"> <i class="fa fa-chevron-left"></i> </a>
+                </li>
+                {% endif %}
+
+                {% for num in facturas.paginator.page_range %}
+                    {% if facturas.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if facturas.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ facturas.next_page_number }}"> <i class="fa fa-chevron-right"></i> </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

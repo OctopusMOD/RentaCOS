@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+  <h2>{% if object %}Editar{% else %}Nueva{% endif %} Factura</h2>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        {{ form.numero_factura.label_tag }}{{ form.numero_factura }}
+      </div>
+      <div class="col-md-4 mb-3">
+        {{ form.contrato.label_tag }}{{ form.contrato }}
+      </div>
+      <div class="col-md-4 mb-3">
+        {{ form.estado.label_tag }}{{ form.estado }}
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        {{ form.fecha_emision.label_tag }}{{ form.fecha_emision }}
+      </div>
+      <div class="col-md-4 mb-3">
+        {{ form.fecha_vencimiento.label_tag }}{{ form.fecha_vencimiento }}
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        {{ form.rut_receptor.label_tag }}{{ form.rut_receptor }}
+      </div>
+      <div class="col-md-4 mb-3">
+        {{ form.razon_social_receptor.label_tag }}{{ form.razon_social_receptor }}
+      </div>
+      <div class="col-md-4 mb-3">
+        {{ form.giro_receptor.label_tag }}{{ form.giro_receptor }}
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        {{ form.direccion_receptor.label_tag }}{{ form.direccion_receptor }}
+      </div>
+      <div class="col-md-6 mb-3">
+        {{ form.tipo_documento.label_tag }}{{ form.tipo_documento }}
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        {{ form.subtotal.label_tag }}
+        {{ form.subtotal }}
+        <small class="form-text text-muted">Neto (sin IVA)</small>
+      </div>
+      <div class="col-md-4 mb-3">
+        {{ form.iva.label_tag }}
+        <input type="text" id="id_iva" name="iva" class="form-control" readonly>
+        <small class="form-text text-muted">IVA (19%)</small>
+      </div>
+      <div class="col-md-4 mb-3">
+        {{ form.total.label_tag }}
+        <input type="text" id="id_total" name="total" class="form-control" readonly>
+        <small class="form-text text-muted">Total (con IVA)</small>
+      </div>
+    </div>
+
+    {% for hidden in form.hidden_fields %}
+      {{ hidden }}
+    {% endfor %}
+
+    <button type="submit" class="btn btn-success mt-3">Guardar</button>
+    <a href="{% url 'alquiler:factura_list' %}" class="btn btn-outline-secondary mt-2">
+      <i class="fa fa-arrow-left"></i> Volver al listado
+    </a>
+  </form>
+
+  <script>
+    function calcularFactura() {
+      const netoInput = document.getElementById("id_subtotal");
+      const ivaInput = document.getElementById("id_iva");
+      const totalInput = document.getElementById("id_total");
+      if (!netoInput || !ivaInput || !totalInput) return;
+      let neto = parseFloat(netoInput.value.replace(",", "."));
+      if (isNaN(neto)) {
+        ivaInput.value = "";
+        totalInput.value = "";
+        return;
+      }
+      let iva = Math.round(neto * 0.19 * 100) / 100;
+      let total = Math.round((neto + iva) * 100) / 100;
+      ivaInput.value = iva.toFixed(2);
+      totalInput.value = total.toFixed(2);
+    }
+
+    function autocompletarClienteContrato() {
+      const contratoSelect = document.getElementById("id_contrato");
+      if (!contratoSelect) return;
+      contratoSelect.addEventListener("change", function() {
+        const contratoId = this.value;
+        if (!contratoId) return;
+        // AJAX para obtener datos de contrato y cliente
+        fetch(`/alquiler/api/datos_contrato/${contratoId}/`)
+          .then(resp => resp.json())
+          .then(data => {
+            if (data && data.cliente) {
+              document.getElementById("id_rut_receptor").value = data.cliente.rut;
+              document.getElementById("id_razon_social_receptor").value = data.cliente.razon_social || "";
+              document.getElementById("id_giro_receptor").value = data.cliente.giro || "";
+              document.getElementById("id_direccion_receptor").value = data.cliente.direccion || "";
+              if (data.subtotal) {
+                document.getElementById("id_subtotal").value = data.subtotal;
+                calcularFactura();
+              }
+            }
+          });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const netoInput = document.getElementById("id_subtotal");
+      if (netoInput) {
+        netoInput.addEventListener("input", calcularFactura);
+        // Calcular al cargar por si viene con valor inicial
+        calcularFactura();
+      }
+      autocompletarClienteContrato();
+    });
+  </script>
+{% endblock %}

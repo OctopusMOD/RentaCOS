@@ -1,0 +1,4 @@
+/* Oculta el bloque de campos de empresa por defecto para evitar parpadeos antes de aplicar el JS */
+.empresa-fields {
+    display: none;
+}

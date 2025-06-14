@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load form_tags %}
+
+{% block title %}{{ title }} - RentaCOS{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h3 class="card-title mb-0">{{ title }}</h3>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+                <div class="row g-3">
+                    <div class="col-md-6 mb-3">
+                        {{ form.cliente.label_tag }}
+                        {{ form.cliente }}
+                        {{ form.cliente.errors }}
+                    </div>
+                    {#
+                    <div class="col-md-6 mb-3">
+                        {{ form.vehiculo.label_tag }}
+                        {{ form.vehiculo }}
+                        {{ form.vehiculo.errors }}
+                    </div>
+                    #}
+                    <div class="col-md-6 mb-3">
+                        {{ form.fecha_inicio.label_tag }}
+                        {{ form.fecha_inicio }}
+                        {{ form.fecha_inicio.errors }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.fecha_fin.label_tag }}
+                        {{ form.fecha_fin }}
+                        {{ form.fecha_fin.errors }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.estado.label_tag }}
+                        {{ form.estado }}
+                        {{ form.estado.errors }}
+                    </div>
+                    <div class="col-12 mb-3">
+                        {{ form.observaciones.label_tag }}
+                        {{ form.observaciones }}
+                        {{ form.observaciones.errors }}
+                    </div>
+                </div>
+                {% for hidden in form.hidden_fields %}
+                    {{ hidden }}
+                {% endfor %}
+                <div class="mt-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa fa-save"></i> Guardar
+                    </button>
+                    <a href="{% url 'alquiler:reserva_list' %}" class="btn btn-secondary">
+                        <i class="fa fa-times"></i> Cancelar
+                    </a>
+                </div>
+            </form>
+            <a href="{% url 'alquiler:reserva_list' %}" class="btn btn-outline-secondary mt-2">
+                <i class="fa fa-arrow-left"></i> Volver al listado
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fechaInicioInput = document.getElementById('id_fecha_inicio');
+    const fechaFinInput = document.getElementById('id_fecha_fin');
+    if (!fechaInicioInput || !fechaFinInput) return;
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 16);
+    fechaInicioInput.min = todayStr;
+    fechaFinInput.min = todayStr;
+    fechaInicioInput.addEventListener('change', function() {
+        fechaFinInput.min = this.value;
+        if (fechaFinInput.value && fechaFinInput.value <= this.value) {
+            fechaFinInput.value = '';
+        }
+    });
+});
+</script>
+{% endblock %}

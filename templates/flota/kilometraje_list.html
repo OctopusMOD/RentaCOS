@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load humanize crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3">Historial de Kilometrajes</h2>
+    <div class="mb-3">
+        <a href="{% url 'flota:kilometraje_registrar' %}" class="btn btn-primary">
+            <i class="fa fa-plus"></i> Registrar Kilometraje
+        </a>
+    </div>
+
+    <form method="get" class="card card-body mb-4">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                {{ filtro.form.vehiculo|as_crispy_field }}
+            </div>
+            <div class="col-md-2">
+                {{ filtro.form.tipo_evento|as_crispy_field }}
+            </div>
+            <div class="col-md-2">
+                {{ filtro.form.usuario|as_crispy_field }}
+            </div>
+            <div class="col-md-3">
+                {{ filtro.form.fecha.label_tag }}
+                <div class="d-flex gap-2">
+                    {{ filtro.form.fecha.start }}
+                    <span class="mx-1">-</span>
+                    {{ filtro.form.fecha.stop }}
+                </div>
+            </div>
+            <div class="col-md-3">
+                {{ filtro.form.kilometraje.label_tag }}
+                <div class="d-flex gap-2">
+                    {{ filtro.form.kilometraje.start }}
+                    <span class="mx-1">-</span>
+                    {{ filtro.form.kilometraje.stop }}
+                </div>
+            </div>
+            <div class="col-md-12 mt-2">
+                <button type="submit" class="btn btn-success"><i class="fa fa-filter"></i> Filtrar</button>
+                <a href="{% url 'flota:lista_kilometrajes' %}" class="btn btn-secondary"><i class="fa fa-times"></i> Limpiar</a>
+            </div>
+        </div>
+    </form>
+
+    {% comment %}
+    Mostrar alerta solo si NO hay filtro por vehículo y se están mostrando solo 10 registros.
+    El filtro por vehículo suele ser por ID, así que revisa con request.GET.vehiculo
+    {% endcomment %}
+    {% if page_obj.paginator.count == 10 and not request.GET.vehiculo %}
+        <div class="alert alert-info">
+            Mostrando solo las 10 últimas actualizaciones. Usa el filtro de vehículo para ver el historial completo de un vehículo.
+        </div>
+    {% endif %}
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Vehículo</th>
+                    <th>Kilometraje</th>
+                    <th>Tipo Evento</th>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Cliente</th>
+                    <th>Observaciones</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for k in page_obj %}
+                <tr>
+                    <td>{{ k.vehiculo }}</td>
+                    <td>{{ k.kilometraje|intcomma }} km</td>
+                    <td>{{ k.get_tipo_evento_display }}</td>
+                    <td>{{ k.fecha|date:'d/m/Y H:i' }}</td>
+                    <td>{{ k.usuario.get_full_name|default:k.usuario.username }}</td>
+                    <td>{{ k.cliente|default:"-" }}</td>
+                    <td>
+                        {% if k.observaciones %}
+                            <span title="{{ k.observaciones }}">{{ k.observaciones|truncatewords:8 }}</span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'flota:detalle_kilometraje' k.pk %}" class="btn btn-sm btn-outline-info" title="Ver"><i class="fa fa-eye"></i></a>
+                        <a href="{% url 'flota:editar_kilometraje' k.pk %}" class="btn btn-sm btn-outline-warning" title="Editar"><i class="fa fa-edit"></i></a>
+                        <a href="{% url 'flota:eliminar_kilometraje' k.pk %}" class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="8">No hay registros de kilometraje.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Paginación de kilometrajes">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?{% if request.GET %}{{ request.GET.urlencode|cut:'page='|add:'&' }}{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a></li>
+            {% endif %}
+            <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+            {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?{% if request.GET %}{{ request.GET.urlencode|cut:'page='|add:'&' }}{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

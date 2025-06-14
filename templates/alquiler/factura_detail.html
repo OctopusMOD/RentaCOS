@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}Factura {{ factura.numero_factura }} - RentaCOS{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Factura {{ factura.numero_factura }}</h3>
+            <a href="{% url 'alquiler:factura_list' %}" class="btn btn-secondary btn-sm">
+                <i class="fa fa-arrow-left"></i> Volver al listado
+            </a>
+        </div>
+        <div class="card-body">
+
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+              {% endfor %}
+            {% endif %}
+
+            <table class="table">
+                <tr>
+                    <th>Número:</th>
+                    <td>{{ factura.numero_factura }}</td>
+                </tr>
+                <tr>
+                    <th>Fecha de emisión:</th>
+                    <td>{{ factura.fecha_emision|date:"d/m/Y" }}</td>
+                </tr>
+                <tr>
+                    <th>Fecha de vencimiento:</th>
+                    <td>{{ factura.fecha_vencimiento|date:"d/m/Y" }}</td>
+                </tr>
+                <tr>
+                    <th>Estado:</th>
+                    <td>
+                        <span class="badge 
+                            {% if factura.estado == 'ANULADA' %}bg-danger
+                            {% elif factura.estado == 'PAGADA' %}bg-success
+                            {% else %}bg-warning text-dark{% endif %}">
+                            {{ factura.get_estado_display }}
+                        </span>
+                        {% if factura.estado == 'PENDIENTE' %}
+                            {% if dias_vencimiento is not None %}
+                                {% if dias_vencimiento > 0 %}
+                                    <small class="text-success">
+                                        (Vence en {{ dias_vencimiento }} día{{ dias_vencimiento|pluralize }})
+                                    </small>
+                                {% else %}
+                                    <small class="text-danger">(Factura vencida)</small>
+                                {% endif %}
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Subtotal:</th>
+                    <td>${{ factura.subtotal|floatformat:0 }}</td>
+                </tr>
+                <tr>
+                    <th>IVA:</th>
+                    <td>${{ factura.iva|floatformat:0 }}</td>
+                </tr>
+                <tr>
+                    <th>Total:</th>
+                    <td><strong>${{ factura.total|floatformat:0 }}</strong></td>
+                </tr>
+            </table>
+
+            <hr>
+            <h5>Receptor</h5>
+            <ul class="list-group mb-3">
+                <li class="list-group-item"><b>RUT:</b> {{ factura.rut_receptor }}</li>
+                <li class="list-group-item"><b>Razón social:</b> {{ factura.razon_social_receptor }}</li>
+                <li class="list-group-item"><b>Giro:</b> {{ factura.giro_receptor }}</li>
+                <li class="list-group-item"><b>Dirección:</b> {{ factura.direccion_receptor }}</li>
+            </ul>
+
+            <hr>
+            <h5>Contrato Relacionado</h5>
+            {% if factura.contrato %}
+                <a href="{% url 'alquiler:contrato_detail' factura.contrato.pk %}">
+                    Contrato N° {{ factura.contrato.numero_contrato }}
+                </a>
+            {% else %}
+                <span class="text-muted">Sin contrato asociado</span>
+            {% endif %}
+
+            <hr>
+            <h5>Notas de Crédito/Débito Asociadas</h5>
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Número</th>
+                  <th>Tipo</th>
+                  <th>Fecha</th>
+                  <th>Monto</th>
+                  <th>Motivo</th>
+                  <th>Ver</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for nota in factura.notas.all %}
+                  <tr>
+                    <td>{{ nota.numero }}</td>
+                    <td>
+                      <span class="badge {% if nota.tipo == 'CREDITO' %}bg-danger{% else %}bg-primary{% endif %}">
+                        {{ nota.get_tipo_display }}
+                      </span>
+                    </td>
+                    <td>{{ nota.fecha_emision|date:"d/m/Y" }}</td>
+                    <td>${{ nota.monto }}</td>
+                    <td>{{ nota.motivo|truncatechars:30 }}</td>
+                    <td>
+                      <a href="{% url 'alquiler:nota_detail' nota.pk %}" class="btn btn-info btn-sm">Ver</a>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="6"><small>No existen notas asociadas.</small></td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <a href="{% url 'alquiler:nota_create' factura.pk %}" class="btn btn-primary btn-sm mb-2">
+              Nueva Nota de Crédito/Débito
+            </a>
+
+            <hr>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <a href="{% url 'alquiler:nota_create' factura.pk %}?tipo=CREDITO" class="btn btn-danger btn-sm">
+                    <i class="fa fa-minus"></i> Crear Nota de Crédito
+                </a>
+                <a href="{% url 'alquiler:nota_create' factura.pk %}?tipo=DEBITO" class="btn btn-primary btn-sm">
+                    <i class="fa fa-plus"></i> Crear Nota de Débito
+                </a>
+                {% if factura.estado == 'PENDIENTE' %}
+                  <form method="post" action="{% url 'alquiler:factura_mark_as_paid' factura.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-sm"
+                            onclick="return confirm('¿Marcar esta factura como pagada?');">
+                      <i class="fa fa-check"></i> Marcar como Pagada
+                    </button>
+                  </form>
+                  <form method="post" action="{% url 'alquiler:factura_anular' factura.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning btn-sm"
+                            onclick="return confirm('¿Anular esta factura? Se recomienda generar nota de crédito.');">
+                      <i class="fa fa-ban"></i> Anular
+                    </button>
+                  </form>
+                {% elif factura.estado == 'ANULADA' %}
+                  <span class="text-danger ms-2">Factura anulada. Debe generarse nota de crédito.</span>
+                {% elif factura.estado == 'PAGADA' %}
+                  <span class="text-success ms-2">Factura pagada correctamente.</span>
+                {% endif %}
+            </div>
+            <a href="{% url 'alquiler:factura_list' %}" class="btn btn-outline-secondary mt-2">
+              <i class="fa fa-arrow-left"></i> Volver al listado
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

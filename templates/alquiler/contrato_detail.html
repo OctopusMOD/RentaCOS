@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block title %}Contrato {{ contrato.numero_contrato }} - RentaCOS{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">Contrato {{ contrato.numero_contrato }}</h3>
+                <div>
+                    <a href="{% url 'alquiler:contrato_update' contrato.pk %}" class="btn btn-warning btn-sm">
+                        <i class="fa fa-edit"></i> Editar
+                    </a>
+                    <a href="{% url 'alquiler:contrato_list' %}" class="btn btn-secondary btn-sm">
+                        <i class="fa fa-arrow-left"></i> Volver
+                    </a>
+                    <a href="{% url 'alquiler:contrato_pdf' contrato.pk %}" class="btn btn-primary btn-sm" target="_blank">
+                        <i class="fa fa-file-pdf"></i> Descargar PDF
+                    </a>
+                    <a href="{% url 'alquiler:factura_create_from_contrato' contrato.pk %}" class="btn btn-success">
+                        <i class="fa fa-file-invoice"></i> Emitir Factura
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+
+            <table class="table">
+                <tr>
+                    <th>Número de Contrato:</th>
+                    <td>{{ contrato.numero_contrato }}</td>
+                </tr>
+                <tr>
+                    <th>Estado:</th>
+                    <td>{{ contrato.get_estado_display }}</td>
+                </tr>
+                <tr>
+                    <th>Fecha de Firma:</th>
+                    <td>{{ contrato.fecha_firma|date:"d/m/Y H:i"|default:"No firmado" }}</td>
+                </tr>
+                <tr>
+                    <th>Reserva asociada:</th>
+                    <td>
+                        {% if contrato.reserva %}
+                            <a href="{% url 'alquiler:reserva_detail' contrato.reserva.pk %}">
+                                Reserva #{{ contrato.reserva.pk }}
+                            </a>
+                        {% else %}
+                            <span class="text-muted">Sin reserva asociada</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Términos y Condiciones:</th>
+                    <td>{{ contrato.terminos_condiciones|linebreaks }}</td>
+                </tr>
+                <tr>
+                    <th>Documento PDF:</th>
+                    <td>
+                        {% if contrato.documento_pdf %}
+                            <a href="{{ contrato.documento_pdf.url }}" target="_blank">Ver PDF</a>
+                        {% else %}
+                            <span class="text-muted">No adjunto</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+
+            <hr>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="mt-3">Datos del Cliente</h5>
+                    <ul class="list-group list-group-flush">
+                        {% if contrato.cliente %}
+                            <li class="list-group-item"><b>RUT:</b> {{ contrato.cliente.rut_empresa|default:contrato.cliente.numero_documento }}</li>
+                            <li class="list-group-item"><b>Razón Social / Nombre:</b> {{ contrato.cliente.razon_social|default:contrato.cliente.nombre_contacto }}</li>
+                            <li class="list-group-item"><b>Contacto:</b> {{ contrato.cliente.nombre_contacto }} {{ contrato.cliente.apellidos_contacto }}</li>
+                            <li class="list-group-item"><b>Correo:</b> {{ contrato.cliente.email_contacto|default:contrato.cliente.email_empresa }}</li>
+                            <li class="list-group-item"><b>Teléfono:</b> {{ contrato.cliente.telefono_contacto|default:contrato.cliente.telefono_empresa }}</li>
+                        {% else %}
+                            <li class="list-group-item text-muted">Sin datos de cliente asociados.</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                {#
+                <div class="col-md-6">
+                    <h5 class="mt-3">Datos del Vehículo</h5>
+                    <ul class="list-group list-group-flush">
+                        {% if contrato.vehiculo %}
+                            <li class="list-group-item"><b>Patente:</b> {{ contrato.vehiculo.patente|default:contrato.vehiculo.placa }}</li>
+                            <li class="list-group-item"><b>Año:</b> {{ contrato.vehiculo.anio }}</li>
+                            <li class="list-group-item"><b>Tracción:</b> {{ contrato.vehiculo.traccion }}</li>
+                            <li class="list-group-item"><b>Combustible:</b> {{ contrato.vehiculo.combustible }}</li>
+                            <li class="list-group-item"><b>Capacidad de carga:</b> {{ contrato.vehiculo.capacidad_carga }}</li>
+                            <li class="list-group-item"><b>Color:</b> {{ contrato.vehiculo.color }}</li>
+                        {% else %}
+                            <li class="list-group-item text-muted">Sin datos de vehículo asociados.</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                #}
+            </div>
+
+            {% if contrato.reserva %}
+            <hr>
+            <h5>Datos de la Reserva Asociada</h5>
+            <dl class="row">
+                <dt class="col-md-3">Código Reserva</dt>
+                <dd class="col-md-9">
+                    <a href="{% url 'alquiler:reserva_detail' contrato.reserva.pk %}">
+                        {{ contrato.reserva.pk }}
+                    </a>
+                </dd>
+                <dt class="col-md-3">Estado Reserva</dt>
+                <dd class="col-md-9">{{ contrato.reserva.get_estado_display }}</dd>
+                <dt class="col-md-3">Fechas</dt>
+                <dd class="col-md-9">
+                    {{ contrato.reserva.fecha_inicio|date:"d/m/Y H:i" }} -
+                    {{ contrato.reserva.fecha_fin|date:"d/m/Y H:i" }}
+                </dd>
+            </dl>
+            {% endif %}
+
+            <hr>
+            <h4>Facturas asociadas</h4>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Número</th>
+                  <th>Fecha emisión</th>
+                  <th>Total</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for factura in contrato.facturas.all %}
+                  <tr>
+                    <td>{{ factura.numero_factura }}</td>
+                    <td>{{ factura.fecha_emision|date:"d/m/Y" }}</td>
+                    <td>${{ factura.total }}</td>
+                    <td>{{ factura.get_estado_display }}</td>
+                    <td>
+                      <a href="{% url 'alquiler:factura_detail' factura.pk %}" class="btn btn-sm btn-info">Ver</a>
+                      {% if factura.estado != "ANULADA" %}
+                        <form action="{% url 'alquiler:factura_anular' factura.pk %}" method="post" style="display:inline;">
+                          {% csrf_token %}
+                          <button class="btn btn-sm btn-danger" type="submit">Anular</button>
+                        </form>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="5">No hay facturas.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+            <a href="{% url 'alquiler:contrato_list' %}" class="btn btn-outline-secondary mt-2">
+              <i class="fa fa-arrow-left"></i> Volver al listado
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

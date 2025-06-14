@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% load form_filters %}
+{% block title %}Vehículos | Flota{% endblock %}
+{% block content %}
+<h2 class="mb-4">Listado de Vehículos</h2>
+
+<form method="get" class="mb-3 card card-body shadow-sm">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-2">
+      {{ filter.form.grupo.label_tag }}
+      {{ filter.form.grupo|add_class:"form-select" }}
+    </div>
+    <div class="col-md-2">
+      {{ filter.form.marca.label_tag }}
+      {{ filter.form.marca|add_class:"form-select" }}
+    </div>
+    <div class="col-md-2">
+      {{ filter.form.modelo.label_tag }}
+      {{ filter.form.modelo|add_class:"form-select" }}
+    </div>
+    <div class="col-md-2">
+      {{ filter.form.patente.label_tag }}
+      {{ filter.form.patente|add_class:"form-control" }}
+    </div>
+    <div class="col-md-2">
+      {{ filter.form.estado_general.label_tag }}
+      {{ filter.form.estado_general|add_class:"form-select" }}
+    </div>
+    <div class="col-md-2">
+      {{ filter.form.subestado.label_tag }}
+      {{ filter.form.subestado|add_class:"form-select" }}
+    </div>
+    <div class="col-md-3">
+      <label for="id_alerta_documentos" class="form-label">Alerta documentos</label>
+      <select name="alerta_documentos" id="id_alerta_documentos" class="form-select">
+        <option value="">Todos</option>
+        <option value="por_vencer" {% if request.GET.alerta_documentos == 'por_vencer' %}selected{% endif %}>Por vencer</option>
+        <option value="vencido" {% if request.GET.alerta_documentos == 'vencido' %}selected{% endif %}>Vencidos</option>
+      </select>
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-primary w-100">
+        <i class="fa fa-filter"></i> Filtrar
+      </button>
+      <a href="{% url 'flota:vehiculo_list' %}" class="btn btn-secondary w-100">Limpiar</a>
+    </div>
+  </div>
+</form>
+
+<div class="mb-3">
+    <a href="{% url 'flota:vehiculo_create' %}" class="btn btn-primary">
+        <i class="fa fa-plus"></i> Nuevo Vehículo
+    </a>
+</div>
+<table class="table table-striped table-hover align-middle">
+    <thead>
+        <tr>
+            <th>Patente</th>
+            <th>Modelo</th>
+            <th>Año</th>
+            <th>Color</th>
+            <th>Transmisión</th>
+            <th>Combustible</th>
+            <th>Estado</th>
+            <th>Kilometraje</th>
+            <th>Documentos</th>
+            <th>Alertas</th>
+            <th class="text-end">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for v in vehiculos %}
+        <tr>
+            <td>{{ v.patente }}</td>
+            <td>{{ v.modelo }}</td>
+            <td>{{ v.anio_fabricacion }}</td>
+            <td>{{ v.color }}</td>
+            <td>{{ v.get_transmision_display }}</td>
+            <td>{{ v.get_combustible_display }}</td>
+            <td>
+        <span class="badge bg-secondary">{{ v.get_estado_display }}</span>
+            </td>
+            <td>{{ v.kilometraje_actual|default:"—" }}</td>
+            <td>
+              {% if v.archivo_soap %}
+                <a href="{{ v.archivo_soap.url }}" target="_blank" class="text-danger me-1" title="Ver SOAP"><i class="fa fa-eye"></i></a>
+                <a href="{{ v.archivo_soap.url }}" download class="text-secondary me-1" title="Descargar SOAP"><i class="fa fa-download"></i></a>
+              {% endif %}
+              {% if v.archivo_permiso %}
+                <a href="{{ v.archivo_permiso.url }}" target="_blank" class="text-primary me-1" title="Ver Permiso"><i class="fa fa-eye"></i></a>
+                <a href="{{ v.archivo_permiso.url }}" download class="text-secondary me-1" title="Descargar Permiso"><i class="fa fa-download"></i></a>
+              {% endif %}
+              {% if v.archivo_rt %}
+                <a href="{{ v.archivo_rt.url }}" target="_blank" class="text-success me-1" title="Ver RT"><i class="fa fa-eye"></i></a>
+                <a href="{{ v.archivo_rt.url }}" download class="text-secondary me-1" title="Descargar RT"><i class="fa fa-download"></i></a>
+              {% endif %}
+              {% if v.archivo_homologacion %}
+                <a href="{{ v.archivo_homologacion.url }}" target="_blank" class="text-warning me-1" title="Ver Homologación"><i class="fa fa-eye"></i></a>
+                <a href="{{ v.archivo_homologacion.url }}" download class="text-secondary me-1" title="Descargar Homologación"><i class="fa fa-download"></i></a>
+              {% endif %}
+            </td>
+            <td>
+        {% if v.estado_soap == 'vencido' %}
+          <span class="badge bg-danger" title="SOAP vencido">SOAP</span>
+        {% elif v.estado_soap == 'por_vencer' %}
+          <span class="badge bg-warning text-dark" title="SOAP por vencer">SOAP</span>
+        {% endif %}
+        {% if v.estado_rev_tecnica == 'vencido' %}
+          <span class="badge bg-danger" title="Rev. Técnica vencida">RT</span>
+        {% elif v.estado_rev_tecnica == 'por_vencer' %}
+          <span class="badge bg-warning text-dark" title="Rev. Técnica por vencer">RT</span>
+        {% endif %}
+        {% if v.estado_permiso_circulacion == 'vencido' %}
+          <span class="badge bg-danger" title="Permiso vencido">PERM</span>
+        {% elif v.estado_permiso_circulacion == 'por_vencer' %}
+          <span class="badge bg-warning text-dark" title="Permiso por vencer">PERM</span>
+        {% endif %}
+        {% if v.estado_homologacion == 'vencido' %}
+          <span class="badge bg-danger" title="Homologación vencida">HOMO</span>
+        {% elif v.estado_homologacion == 'por_vencer' %}
+          <span class="badge bg-warning text-dark" title="Homologación por vencer">HOMO</span>
+        {% endif %}
+      </td>
+            <td class="text-end">
+                <a href="{% url 'flota:vehiculo_detail' v.id %}"
+                   class="btn btn-outline-info btn-sm"
+                   data-bs-toggle="tooltip" title="Ver">
+                  <i class="fa fa-search"></i>
+                </a>
+                <a href="{% url 'flota:vehiculo_update' v.id %}"
+                   class="btn btn-outline-secondary btn-sm"
+                   data-bs-toggle="tooltip" title="Editar">
+                  <i class="fa fa-edit"></i>
+                </a>
+                <a href="#"
+                   class="btn btn-outline-danger btn-sm btn-eliminar"
+                   data-url="{% url 'flota:vehiculo_delete' v.id %}"
+                   data-bs-toggle="tooltip" title="Eliminar">
+                  <i class="fa fa-trash"></i>
+                </a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="10" class="text-center">No hay vehículos registrados.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% if is_paginated %}
+<nav>
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a>
+        </li>
+        {% endif %}
+        {% for i in paginator.page_range %}
+        <li class="page-item {% if page_obj.number == i %}active{% endif %}">
+            <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+        </li>
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+// Inicializar tooltips de Bootstrap 5
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+  return new bootstrap.Tooltip(tooltipTriggerEl);
+});
+
+document.querySelectorAll('.btn-eliminar').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: "¡Esta acción no se puede deshacer!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = btn.dataset.url;
+            }
+        })
+    });
+});
+</script>
+{% endblock %}

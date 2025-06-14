@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Detalle Vehículo | Flota{% endblock %}
+{% block content %}
+<h2 class="mb-4">Detalle de Vehículo: {{ vehiculo.patente }}</h2>
+<div class="row">
+    <div class="col-md-7">
+        <table class="table table-bordered">
+            <tr>
+                <th>Marca / Modelo</th>
+                <td>{{ vehiculo.modelo.marca }} / {{ vehiculo.modelo.nombre }}</td>
+            </tr>
+            <tr>
+                <th>Año</th>
+                <td>{{ vehiculo.anio_fabricacion }}</td>
+            </tr>
+            <tr>
+                <th>Color</th>
+                <td>{{ vehiculo.color }}</td>
+            </tr>
+            <tr>
+                <th>Transmisión</th>
+                <td>{{ vehiculo.get_transmision_display }}</td>
+            </tr>
+            <tr>
+                <th>Combustible</th>
+                <td>{{ vehiculo.get_combustible_display }}</td>
+            </tr>
+            <tr>
+                <th>Estado</th>
+                <td><span class="badge bg-secondary">{{ vehiculo.get_estado_display }}</span></td>
+            </tr>
+            <tr>
+                <th>Kilometraje</th>
+                <td>{{ vehiculo.kilometraje_actual }}</td>
+            </tr>
+            <tr>
+                <th>Capacidad</th>
+                <td>{{ vehiculo.capacidad|default:"—" }}</td>
+            </tr>
+            <tr>
+                <th>Número de asientos</th>
+                <td>{{ vehiculo.numero_asientos|default:"—" }}</td>
+            </tr>
+            <tr>
+                <th>Observaciones</th>
+                <td>{{ vehiculo.observaciones|linebreaks }}</td>
+            </tr>
+            <tr>
+                <th>Historial de Kilometraje</th>
+                <td><a href="{% url 'flota:historial_kilometraje' vehiculo.id %}">Ver historial de kilometraje</a></td>
+            </tr>
+        </table>
+        <a href="{% url 'flota:vehiculo_update' vehiculo.id %}" class="btn btn-secondary">
+            <i class="fa fa-edit"></i> Editar
+        </a>
+        <a href="{% url 'flota:vehiculo_list' %}" class="btn btn-outline-primary">Volver al listado</a>
+    </div>
+    <div class="col-md-5">
+        <div class="card mb-3">
+            <div class="card-header bg-light">Documentos Legales</div>
+            <ul class="list-group list-group-flush">
+                {% if vehiculo.archivo_soap %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="fa fa-file-pdf-o text-danger"></i> SOAP
+                        {% if vehiculo.estado_soap == 'vencido' %}
+                          <span class="badge bg-danger ms-2">VENCIDO</span>
+                        {% elif vehiculo.estado_soap == 'por_vencer' %}
+                          <span class="badge bg-warning text-dark ms-2">Por vencer</span>
+                        {% endif %}
+                    </span>
+                    <span>
+                        <a href="{{ vehiculo.archivo_soap.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="fa fa-eye"></i> Ver PDF
+                        </a>
+                        <a href="{{ vehiculo.archivo_soap.url }}" download class="btn btn-outline-secondary btn-sm">
+                            <i class="fa fa-download"></i> Descargar
+                        </a>
+                    </span>
+                </li>
+                {% endif %}
+                {% if vehiculo.archivo_permiso_circulacion %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="fa fa-file-pdf-o text-danger"></i> Permiso de Circulación
+                    </span>
+                    <span>
+                        <a href="{{ vehiculo.archivo_permiso_circulacion.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="fa fa-eye"></i> Ver PDF
+                        </a>
+                        <a href="{{ vehiculo.archivo_permiso_circulacion.url }}" download class="btn btn-outline-secondary btn-sm">
+                            <i class="fa fa-download"></i> Descargar
+                        </a>
+                    </span>
+                </li>
+                {% endif %}
+                {% if vehiculo.archivo_rev_tecnica %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="fa fa-file-pdf-o text-danger"></i> Revisión Técnica
+                    </span>
+                    <span>
+                        <a href="{{ vehiculo.archivo_rev_tecnica.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="fa fa-eye"></i> Ver PDF
+                        </a>
+                        <a href="{{ vehiculo.archivo_rev_tecnica.url }}" download class="btn btn-outline-secondary btn-sm">
+                            <i class="fa fa-download"></i> Descargar
+                        </a>
+                    </span>
+                </li>
+                {% endif %}
+                {% if vehiculo.archivo_homologacion %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="fa fa-file-pdf-o text-danger"></i> Homologación
+                    </span>
+                    <span>
+                        <a href="{{ vehiculo.archivo_homologacion.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="fa fa-eye"></i> Ver PDF
+                        </a>
+                        <a href="{{ vehiculo.archivo_homologacion.url }}" download class="btn btn-outline-secondary btn-sm">
+                            <i class="fa fa-download"></i> Descargar
+                        </a>
+                    </span>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% if vehiculo.archivo_soap %}
+<div class="mb-4">
+  <label class="form-label">Vista previa SOAP:</label>
+  <embed src="{{ vehiculo.archivo_soap.url }}" type="application/pdf" width="100%" height="500px" class="border rounded" />
+</div>
+{% endif %}
+<p>
+  <strong>Estado:</strong>
+  <span class="badge 
+    {% if vehiculo.estado == 'DISPONIBLE' %} bg-success
+    {% elif vehiculo.estado == 'EN_ARRIENDO' %} bg-primary
+    {% elif vehiculo.estado == 'EN_REEMPLAZO' %} bg-warning text-dark
+    {% elif vehiculo.estado == 'EN_REPARACION' %} bg-danger
+    {% elif vehiculo.estado == 'FUERA_SERVICIO' %} bg-dark
+    {% elif vehiculo.estado == 'DADO_BAJA' %} bg-secondary
+    {% elif vehiculo.estado == 'EN_EQUIPAMIENTO' %} bg-info text-dark
+    {% elif vehiculo.estado == 'EN_TRANSITO' %} bg-warning
+    {% elif vehiculo.estado == 'MANTENIMIENTO_ATRASADO' %} bg-danger
+    {% elif vehiculo.estado == 'PROX_MANTENIMIENTO' %} bg-warning
+    {% elif vehiculo.estado == 'EN_OBSERVACION' %} bg-secondary
+    {% else %} bg-light text-dark
+    {% endif %}">
+    {{ vehiculo.get_estado_display }}
+  </span>
+</p>
+{% endblock %}

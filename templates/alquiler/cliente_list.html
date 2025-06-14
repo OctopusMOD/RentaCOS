@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}Clientes - RentaCOS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Clientes</h2>
+    <a href="{% url 'alquiler:cliente_create' %}" class="btn btn-primary">
+        <i class="fa fa-plus"></i> Nuevo Cliente
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" name="q" class="form-control" placeholder="Buscar por nombre, RUT, contacto..." value="{{ query }}">
+            </div>
+            <div class="col-md-2">
+                <select name="tipo" class="form-select">
+                    <option value="">Todos los tipos</option>
+                    {% for tipo_value, tipo_label in tipos_cliente %}
+                    <option value="{{ tipo_value }}" {% if selected_tipo == tipo_value %}selected{% endif %}>
+                        {{ tipo_label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="estado" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="activo" {% if selected_estado == 'activo' %}selected{% endif %}>Activos</option>
+                    <option value="inactivo" {% if selected_estado == 'inactivo' %}selected{% endif %}>Inactivos</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="region" class="form-select">
+                    <option value="">Todas las regiones</option>
+                    {% for region in regiones %}
+                    <option value="{{ region }}" {% if selected_region == region %}selected{% endif %}>
+                        {{ region }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-secondary w-100">
+                    <i class="fa fa-search"></i> Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Tipo</th>
+                        <th>Razón Social / Nombre</th>
+                        <th>RUT / Documento</th>
+                        <th>Contacto</th>
+                        <th>Email</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cliente in clientes %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ cliente.get_tipo_cliente_display }}</td>
+                        <td>
+                            {% if cliente.tipo_cliente == "EMPRESA" %}
+                                {{ cliente.razon_social }}
+                            {% else %}
+                                {{ cliente.nombre_contacto }} {{ cliente.apellidos_contacto }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if cliente.tipo_cliente == "EMPRESA" %}
+                                {{ cliente.rut_empresa }}
+                            {% else %}
+                                {{ cliente.numero_documento }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if cliente.tipo_cliente == "EMPRESA" %}
+                                {{ cliente.nombre_contacto }}
+                            {% else %}
+                                {{ cliente.nombre_contacto }} {{ cliente.apellidos_contacto }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if cliente.tipo_cliente == "EMPRESA" %}
+                                {{ cliente.email_empresa }}
+                            {% else %}
+                                {{ cliente.email_contacto }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if cliente.activo %}success{% else %}danger{% endif %}">
+                                {% if cliente.activo %}Activo{% else %}Inactivo{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'alquiler:cliente_detail' cliente.pk %}" class="btn btn-sm btn-info">
+                                <i class="fa fa-eye"></i>
+                            </a>
+                            <a href="{% url 'alquiler:cliente_update' cliente.pk %}" class="btn btn-sm btn-warning">
+                                <i class="fa fa-edit"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center">No hay clientes registrados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if clientes.has_other_pages %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% if clientes.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ clientes.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_tipo %}&tipo={{ selected_tipo }}{% endif %}{% if selected_estado %}&estado={{ selected_estado }}{% endif %}{% if selected_region %}&region={{ selected_region }}{% endif %}">
+                        <i class="fa fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                {% for num in clientes.paginator.page_range %}
+                    {% if clientes.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if selected_tipo %}&tipo={{ selected_tipo }}{% endif %}{% if selected_estado %}&estado={{ selected_estado }}{% endif %}{% if selected_region %}&region={{ selected_region }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                {% if clientes.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ clientes.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_tipo %}&tipo={{ selected_tipo }}{% endif %}{% if selected_estado %}&estado={{ selected_estado }}{% endif %}{% if selected_region %}&region={{ selected_region }}{% endif %}">
+                        <i class="fa fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

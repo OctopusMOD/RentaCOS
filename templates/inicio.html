@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Bienvenido a RentaCOS</title>
+</head>
+<body>
+    <h1>Bienvenido a RentaCOS</h1>
+    <p>Sistema de gestión de alquileres.</p>
+    <ul>
+        <li><a href="{% url 'alquiler:factura_list' %}">Facturas</a></li>
+        <li><a href="{% url 'alquiler:cliente_list' %}">Clientes</a></li>
+        <li><a href="{% url 'alquiler:contrato_list' %}">Contratos</a></li>
+        <li><a href="{% url 'alquiler:reserva_list' %}">Reservas</a></li>
+    </ul>
+</body>
+</html>

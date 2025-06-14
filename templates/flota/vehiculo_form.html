@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% load form_filters %}
+{% block title %}{{ view.object|default:"Nuevo Vehículo" }} | Flota{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h2 class="mb-4">
+      {% if view.object %}<i class="fa fa-edit"></i> Editar Vehículo: {{ view.object.patente }}
+      {% else %}<i class="fa fa-car"></i> Nuevo Vehículo{% endif %}
+  </h2>
+  <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+    {% csrf_token %}
+
+    {% if form.errors %}
+      <div class="alert alert-danger">
+        <ul class="mb-0">
+        {% for field in form %}
+          {% for error in field.errors %}
+            <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+        {% for error in form.non_field_errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <!-- Sección Grupo, Marca, Modelo, Carrocería -->
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">Identificación</div>
+      <div class="card-body row g-3">
+        <div class="col-md-3">
+          <label for="id_grupo" class="form-label">Grupo</label>
+          {{ form.grupo|add_class:"form-select" }}
+        </div>
+        <div class="col-md-3">
+          <label for="id_marca" class="form-label">Marca</label>
+          <select id="id_marca" name="marca" class="form-select" required>
+              <option value="">---------</option>
+              {% for marca in marcas %}
+              <option value="{{ marca.id }}">{{ marca.nombre }}</option>
+              {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="id_modelo" class="form-label">Modelo</label>
+          <select id="id_modelo" name="modelo" class="form-select" required>
+              <option value="">---------</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="id_tipo_carroceria" class="form-label">Tipo de Carrocería</label>
+          <input type="text" id="id_tipo_carroceria" class="form-control" value="" readonly>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección Datos Generales -->
+    <div class="card mb-4">
+      <div class="card-header bg-secondary text-white">Datos Generales</div>
+      <div class="card-body row g-3">
+        <div class="col-md-3">{{ form.patente.label_tag }}{{ form.patente|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.vin.label_tag }}{{ form.vin|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.anio_fabricacion.label_tag }}{{ form.anio_fabricacion|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.color.label_tag }}{{ form.color|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.transmision.label_tag }}{{ form.transmision|add_class:"form-select" }}</div>
+        <div class="col-md-3">{{ form.combustible.label_tag }}{{ form.combustible|add_class:"form-select" }}</div>
+        <div class="col-md-3">{{ form.traccion.label_tag }}{{ form.traccion|add_class:"form-select" }}</div>
+        <div class="col-md-3">{{ form.tenencia.label_tag }}{{ form.tenencia|add_class:"form-select" }}</div>
+        <div class="col-md-3">{{ form.capacidad.label_tag }}{{ form.capacidad|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.numero_asientos.label_tag }}{{ form.numero_asientos|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.estado_general.label_tag }}{{ form.estado_general|add_class:"form-select" }}</div>
+        <div class="col-md-3">
+          {{ form.subestado.label_tag }}
+          {{ form.subestado|add_class:"form-select" }}
+        </div>
+        <div class="col-md-3">{{ form.kilometraje_actual.label_tag }}{{ form.kilometraje_actual|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.proximo_mantenimiento.label_tag }}{{ form.proximo_mantenimiento|add_class:"form-control" }}</div>
+      </div>
+    </div>
+
+    <!-- Sección Observaciones -->
+    <div class="card mb-4">
+      <div class="card-header bg-info text-white">Observaciones</div>
+      <div class="card-body">
+        {{ form.observaciones|add_class:"form-control" }}
+      </div>
+    </div>
+
+    <!-- Sección Documentos -->
+    <div class="card mb-4">
+      <div class="card-header bg-dark text-white">Documentos Legales</div>
+      <div class="card-body row g-3">
+        <div class="col-md-3">{{ form.fecha_vencimiento_soap.label_tag }}{{ form.fecha_vencimiento_soap|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.archivo_soap.label_tag }}{{ form.archivo_soap|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.fecha_vencimiento_rev_tecnica.label_tag }}{{ form.fecha_vencimiento_rev_tecnica|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.archivo_rev_tecnica.label_tag }}{{ form.archivo_rev_tecnica|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.fecha_vencimiento_permiso_circulacion.label_tag }}{{ form.fecha_vencimiento_permiso_circulacion|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.archivo_permiso_circulacion.label_tag }}{{ form.archivo_permiso_circulacion|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.fecha_vencimiento_homologacion.label_tag }}{{ form.fecha_vencimiento_homologacion|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.archivo_homologacion.label_tag }}{{ form.archivo_homologacion|add_class:"form-control" }}</div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-success">
+            <i class="fa fa-save"></i> Guardar
+        </button>
+        <a href="{% url 'flota:vehiculo_list' %}" class="btn btn-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+<script>
+        // Data para el select dependiente
+        const modelosPorMarca = {{ modelos_por_marca_json|safe }};
+
+        const marcaSelect = document.getElementById('id_marca');
+        const modeloSelect = document.getElementById('id_modelo');
+        const carroceriaInput = document.getElementById('id_tipo_carroceria');
+
+        function actualizarModelos() {
+            const marcaId = marcaSelect.value;
+            const modelos = modelosPorMarca[marcaId] || [];
+            modeloSelect.innerHTML = '<option value="">---------</option>';
+            modelos.forEach(function(modelo) {
+                const opt = document.createElement('option');
+                opt.value = modelo.id;
+                opt.textContent = modelo.nombre + " (" + modelo.carroceria + ")";
+                modeloSelect.appendChild(opt);
+            });
+            modeloSelect.disabled = modelos.length === 0;
+            carroceriaInput.value = '';
+        }
+
+        marcaSelect.addEventListener('change', function() {
+            actualizarModelos();
+        });
+
+        modeloSelect.addEventListener('change', function() {
+            const marcaId = marcaSelect.value;
+            const modelos = modelosPorMarca[marcaId] || [];
+            const modelo = modelos.find(m => m.id === modeloSelect.value);
+            carroceriaInput.value = modelo ? modelo.carroceria : '';
+        });
+
+        // Si hay valor preseleccionado (en edición), selecciónalo
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if form.instance.pk %}
+            var selectedModeloId = "{{ form.instance.modelo.id }}";
+            var selectedMarcaId = "{{ form.instance.modelo.marca.id }}";
+            marcaSelect.value = selectedMarcaId;
+            actualizarModelos();
+            modeloSelect.value = selectedModeloId;
+            // Mostrar carrocería del modelo seleccionado
+            var modelos = modelosPorMarca[selectedMarcaId] || [];
+            var modelo = modelos.find(m => m.id === selectedModeloId);
+            carroceriaInput.value = modelo ? modelo.carroceria : '';
+            {% endif %}
+        });
+    </script>
+{% endblock %}

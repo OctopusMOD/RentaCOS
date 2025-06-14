@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ view.object|default:"Nuevo Grupo" }} | Flota{% endblock %}
+{% block content %}
+<h2 class="mb-4">
+    {% if view.object %}Editar Grupo: {{ view.object.nombre }}{% else %}Nuevo Grupo{% endif %}
+</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-success">
+        <i class="fa fa-save"></i> Guardar
+    </button>
+    <a href="{% url 'flota:grupo_list' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Dashboard de Alquileres{% endblock %}
+{% block content %}
+<h2 class="mb-4">Dashboard de Alquileres</h2>
+<div class="row g-4 mb-4">
+  <div class="col-md-2">
+    <div class="card text-bg-primary">
+      <div class="card-body text-center">
+        <h6>Reservas Hoy</h6>
+        <h2>{{ total_reservas_hoy }}</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-bg-info">
+      <div class="card-body text-center">
+        <h6>Reservas Mes</h6>
+        <h2>{{ total_reservas_mes }}</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-bg-secondary">
+      <div class="card-body text-center">
+        <h6>Total Reservas</h6>
+        <h2>{{ total_reservas }}</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-bg-success">
+      <div class="card-body text-center">
+        <h6>Contratos Activos</h6>
+        <h2>{{ contratos_activos }}</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-bg-warning">
+      <div class="card-body text-center">
+        <h6>Facturas Pendientes</h6>
+        <h2>{{ facturas_pendientes }}</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-bg-dark">
+      <div class="card-body text-center">
+        <h6>Facturas Emitidas</h6>
+        <h2>{{ facturas_emitidas }}</h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">Reservas por Estado</div>
+      <ul class="list-group list-group-flush">
+        {% for item in reservas_por_estado %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ item.estado|title }}
+            <span class="badge text-bg-primary">{{ item.cantidad }}</span>
+          </li>
+        {% empty %}
+          <li class="list-group-item">Sin reservas registradas</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">Próximas Reservas</div>
+      <table class="table mb-0 table-sm table-striped">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Cliente</th>
+            <th>Inicio</th>
+            <th>Fin</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for reserva in proximas_reservas %}
+          <tr>
+            <td>{{ reserva.id }}</td>
+            <td>
+              {% if reserva.cliente.tipo_cliente == "EMPRESA" %}
+                {{ reserva.cliente.razon_social }}
+              {% else %}
+                {{ reserva.cliente.nombre_contacto }} {{ reserva.cliente.apellidos_contacto }}
+              {% endif %}
+            </td>
+            <td>{{ reserva.fecha_inicio|date:"d/m/Y H:i" }}</td>
+            <td>{{ reserva.fecha_fin|date:"d/m/Y H:i" }}</td>
+            <td>
+              <span class="badge bg-{% if reserva.estado == 'CONFIRMADA' %}success{% elif reserva.estado == 'PENDIENTE' %}warning{% elif reserva.estado == 'CANCELADA' %}danger{% else %}info{% endif %}">
+                {{ reserva.get_estado_display }}
+              </span>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="text-center">Sin próximas reservas</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="mt-4">
+  <a href="{% url 'alquiler:reserva_create' %}" class="btn btn-outline-primary me-2"><i class="fa fa-plus"></i> Nueva Reserva</a>
+  <a href="{% url 'alquiler:cliente_create' %}" class="btn btn-outline-success me-2"><i class="fa fa-user-plus"></i> Nuevo Cliente</a>
+  <a href="{% url 'alquiler:contrato_create' %}" class="btn btn-outline-secondary me-2"><i class="fa fa-file-contract"></i> Nuevo Contrato</a>
+  <a href="{% url 'alquiler:factura_create' %}" class="btn btn-outline-warning"><i class="fa fa-file-invoice"></i> Nueva Factura</a>
+</div>
+{% endblock %}
