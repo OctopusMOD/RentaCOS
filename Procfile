@@ -1,0 +1,1 @@
+web: gunicorn rentacos.wsgi --log-file -
