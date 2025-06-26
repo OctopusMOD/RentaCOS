@@ -1,1 +1,1 @@
-web: gunicorn rentacos.wsgi --log-file -
+web: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn rentacos.wsgi --log-file -
