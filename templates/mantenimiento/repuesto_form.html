@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Repuesto{% endblock %}
+{% block content %}
+<h2>{{ form.instance.pk|yesno:"Editar,Crear" }} Repuesto</h2>
+<form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn btn-success" type="submit">Guardar</button>
+    <a href="{% url 'mantenimiento:repuesto_list' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+{% endblock %}

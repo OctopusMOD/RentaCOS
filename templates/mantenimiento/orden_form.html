@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Orden de Mantenimiento{% endblock %}
+{% block content %}
+
+<h2>Orden de Mantenimiento</h2>
+<form method="post">
+    {% csrf_token %}
+
+    <fieldset class="border p-3 mb-4">
+        <legend class="w-auto px-2">Datos Generales</legend>
+        {{ form.as_p }}
+        {% if form.instance.vehiculo %}
+        <div class="row">
+            <div class="col">Chasis/VIN: <b>{{ form.instance.vehiculo.chasis_vin }}</b></div>
+            <div class="col">Año: <b>{{ form.instance.vehiculo.anio }}</b></div>
+            <div class="col">Color: <b>{{ form.instance.vehiculo.color }}</b></div>
+            <div class="col">Marca: <b>{{ form.instance.vehiculo.marca }}</b></div>
+            <div class="col">Modelo: <b>{{ form.instance.vehiculo.modelo }}</b></div>
+        </div>
+        {% endif %}
+    </fieldset>
+
+    <h3>DEBUG FORMSETS</h3>
+    {{ trabajos_formset.management_form }}
+    {{ repuestos_formset.management_form }}
+
+    <fieldset class="border p-3 mb-4">
+        <legend>Trabajos Realizados</legend>
+        <table class="table table-bordered" id="trabajos-table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Descripción</th>
+                    <th>Unidades</th>
+                    <th>Valor</th>
+                    <th>Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="trabajos-tbody">
+            {% for form in trabajos_formset %}
+                <tr>
+                    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <td>{{ form.codigo }}</td>
+                    <td>{{ form.descripcion }}</td>
+                    <td>{{ form.unidades }}</td>
+                    <td>{{ form.valor_unitario }}</td>
+                    <td></td>
+                    <td>
+                        {% if trabajos_formset.can_delete %}
+                            {{ form.DELETE }} <button type="button" class="btn btn-danger btn-sm" onclick="deleteRow(this);">Eliminar</button>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-success" onclick="addTrabajoRow();">Agregar línea</button>
+    </fieldset>
+
+    <fieldset class="border p-3 mb-4">
+        <legend class="w-auto px-2">Repuestos/Insumos Utilizados</legend>
+        <table class="table table-bordered" id="repuestos-table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Descripción</th>
+                    <th>Unidades</th>
+                    <th>Valor</th>
+                    <th>Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="repuestos-tbody">
+            {% for form in repuestos_formset %}
+                <tr>
+                    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <td>{{ form.repuesto }}</td>
+                    <td></td>
+                    <td>{{ form.cantidad }}</td>
+                    <td>{{ form.valor_unitario }}</td>
+                    <td></td>
+                    <td>
+                        {% if repuestos_formset.can_delete %}
+                            {{ form.DELETE }} <button type="button" class="btn btn-danger btn-sm" onclick="deleteRow(this);">Eliminar</button>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-success" onclick="addRepuestoRow();">Agregar línea</button>
+    </fieldset>
+
+    <button type="submit" class="btn btn-primary">Guardar Orden</button>
+    <a href="{% url 'mantenimiento:orden_list' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+
+<script src="{% static 'js/orden_mantenimiento_dinamico.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Detalle Orden #{{ orden.id }}{% endblock %}
+{% block content %}
+<h2>Orden de Mantenimiento #{{ orden.id }}</h2>
+<ul class="list-group mb-3">
+    <li class="list-group-item"><b>Vehículo:</b> {{ orden.vehiculo }}</li>
+    <li class="list-group-item"><b>Tipo:</b> {{ orden.tipo }}</li>
+    <li class="list-group-item"><b>Estado:</b> {{ orden.get_estado_display }}</li>
+    <li class="list-group-item"><b>Ingreso:</b> {{ orden.fecha_ingreso }}</li>
+    <li class="list-group-item"><b>Salida:</b> {{ orden.fecha_salida|default:"-" }}</li>
+    <li class="list-group-item"><b>Técnico:</b> {{ orden.tecnico_responsable|default:"-" }}</li>
+    <li class="list-group-item"><b>Descripción Problema:</b> {{ orden.descripcion_problema|default:"-" }}</li>
+    <li class="list-group-item"><b>Diagnóstico:</b> {{ orden.diagnostico|default:"-" }}</li>
+    <li class="list-group-item"><b>Observaciones:</b> {{ orden.observaciones|default:"-" }}</li>
+</ul>
+<h5 class="mt-4">Repuestos Utilizados</h5>
+<a class="btn btn-sm btn-primary mb-2" href="{% url 'mantenimiento:consumo_create' %}?orden={{ orden.id }}">Agregar Consumo</a>
+<table class="table table-sm table-bordered">
+    <thead>
+        <tr>
+            <th>Repuesto</th>
+            <th>Cantidad</th>
+            <th>Observaciones</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for consumo in orden.repuestos_utilizados.all %}
+        <tr>
+            <td>{{ consumo.repuesto }}</td>
+            <td>{{ consumo.cantidad }}</td>
+            <td>{{ consumo.observaciones|default:"-" }}</td>
+            <td>
+                <a href="{% url 'mantenimiento:consumo_update' consumo.id %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">No hay repuestos registrados para esta orden.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a class="btn btn-secondary" href="{% url 'mantenimiento:orden_list' %}">Volver a Órdenes</a>
+{% endblock %}

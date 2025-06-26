@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Consumos de Repuestos{% endblock %}
+{% block content %}
+<h2>Consumos de Repuestos</h2>
+<a class="btn btn-primary mb-3" href="{% url 'mantenimiento:consumo_create' %}">Nuevo Consumo</a>
+<table class="table table-sm table-bordered">
+    <thead>
+        <tr>
+            <th>Orden</th>
+            <th>Repuesto</th>
+            <th>Cantidad</th>
+            <th>Observaciones</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for consumo in consumos %}
+        <tr>
+            <td>{{ consumo.orden }}</td>
+            <td>{{ consumo.repuesto }}</td>
+            <td>{{ consumo.cantidad }}</td>
+            <td>{{ consumo.observaciones|default:"-" }}</td>
+            <td>
+                <a href="{% url 'mantenimiento:consumo_update' consumo.id %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">No hay consumos registrados.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
