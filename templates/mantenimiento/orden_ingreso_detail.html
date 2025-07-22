@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Detalle Orden de Ingreso{% endblock %}
+
+{% block extra_head %}
+<style>
+    .detalle-oi-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    .oi-section-title {
+        font-size: 1.25rem;
+        color: #0d6efd;
+        margin-top: 1.5rem;
+        font-weight: 600;
+        letter-spacing: .5px;
+    }
+    .oi-table th {
+        background: #e9f1fa;
+        color: #0056b3;
+    }
+    .oi-table, .oi-table th, .oi-table td {
+        border: 1px solid #bbb;
+    }
+    .oi-table td, .oi-table th {
+        padding: 8px;
+    }
+    .oi-firmas {
+        margin-top: 40px;
+        display: flex;
+        justify-content: space-between;
+    }
+    .oi-firma {
+        width: 30%;
+        text-align: center;
+    }
+    .oi-firma-linea {
+        border-bottom: 1px solid #000;
+        margin-top: 40px;
+        width: 80%;
+        margin-left: 10%;
+    }
+    @media (max-width: 800px) {
+        .oi-firmas { flex-direction: column; gap: 24px; }
+        .oi-firma { width: 100%; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detalle-oi-container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>
+            <i class="fa fa-file-text-o text-primary"></i>
+            Orden de Ingreso N° {{ orden.numero_orden }}
+        </h2>
+        <a href="{% url 'mantenimiento:orden_ingreso_pdf' orden.pk %}" class="btn btn-outline-danger" target="_blank">
+            <i class="fa fa-file-pdf-o"></i> Exportar a PDF
+        </a>
+    </div>
+
+    <h4 class="oi-section-title"><i class="fa fa-car"></i> Datos del Vehículo</h4>
+    <table class="oi-table mb-2" style="width:100%">
+        <tr>
+            <th>Patente</th>
+            <td>{{ orden.vehiculo.patente }}</td>
+            <th>Marca</th>
+            <td>{{ orden.vehiculo.modelo.marca.nombre }}</td>
+        </tr>
+        <tr>
+            <th>Modelo</th>
+            <td>{{ orden.vehiculo.modelo.nombre }}</td>
+            <th>Año</th>
+            <td>{{ orden.vehiculo.modelo.anio }}</td>
+        </tr>
+        <tr>
+            <th>VIN</th>
+            <td colspan="3">{{ orden.vehiculo.vin|default:"-" }}</td>
+        </tr>
+        <tr>
+            <th>Kilometraje Actual</th>
+            <td>{{ orden.kilometraje_actual|default:"-" }}</td>
+            <th>Fecha de Ingreso</th>
+            <td>{{ orden.fecha_ingreso|date:"d/m/Y H:i" }}</td>
+        </tr>
+    </table>
+
+    <h4 class="oi-section-title"><i class="fa fa-info-circle"></i> Información de la Orden</h4>
+    <table class="oi-table mb-2" style="width:100%">
+        <tr>
+            <th>Taller</th>
+            <td>{{ orden.taller.nombre }}</td>
+            <th>Tipo de Mantenimiento</th>
+            <td>{{ orden.tipo_mantenimiento.nombre }}</td>
+        </tr>
+        <tr>
+            <th>Estado</th>
+            <td>{{ orden.estado }}</td>
+            <th>Creado el</th>
+            <td>{{ orden.creado|date:"d/m/Y H:i" }}</td>
+        </tr>
+    </table>
+
+    <h4 class="oi-section-title"><i class="fa fa-cogs"></i> Trabajos/Revisiones Solicitados</h4>
+    <table class="oi-table mb-3" style="width:100%">
+        <thead>
+        <tr>
+            <th style="width:50px;">#</th>
+            <th>Descripción</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for trabajo in orden.trabajos.all %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ trabajo.descripcion }}</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="2"><em>No hay trabajos solicitados.</em></td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <h4 class="oi-section-title"><i class="fa fa-sticky-note-o"></i> Observaciones / Notas</h4>
+    <div class="mb-4">
+        {% if orden.observaciones %}
+            {{ orden.observaciones }}
+        {% else %}
+            <em>No hay observaciones registradas.</em>
+        {% endif %}
+    </div>
+
+    <div class="oi-firmas">
+        <div class="oi-firma">
+            <div class="oi-firma-linea"></div>
+            <span>Firma Cliente</span>
+        </div>
+        <div class="oi-firma">
+            <div class="oi-firma-linea"></div>
+            <span>Firma Técnico</span>
+        </div>
+        <div class="oi-firma">
+            <div class="oi-firma-linea"></div>
+            <span>Firma Taller</span>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        {% if orden.estado != "CANCELADA" %}
+        <form method="post" action="{% url 'mantenimiento:orden_ingreso_cancelar' orden.pk %}" style="display:inline-block;">
+            {% csrf_token %}
+            <button class="btn btn-danger" type="submit">
+                <i class="fa fa-ban"></i> Cancelar OI
+            </button>
+        </form>
+        <form method="post" action="{% url 'mantenimiento:orden_ingreso_convertir_ot' orden.pk %}" style="display:inline-block;">
+            {% csrf_token %}
+            <button class="btn btn-success" type="submit">
+                <i class="fa fa-exchange-alt"></i> Convertir en OT
+            </button>
+        </form>
+        {% else %}
+        <span class="badge bg-danger text-white ms-2">Orden Cancelada</span>
+        {% endif %}
+        <a href="{% url 'mantenimiento:orden_ingreso_list' %}" class="btn btn-secondary">Volver al listado</a>
+    </div>
+</div>
+{% endblock %}

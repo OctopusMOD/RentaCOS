@@ -6,10 +6,14 @@
 <table class="table table-sm table-bordered">
     <thead>
         <tr>
-            <th>Nombre</th>
+            <th>Nombre Comercial</th>
+            <th>Razón Social</th>
+            <th>RUT</th>
             <th>Dirección</th>
             <th>Teléfono</th>
-            <th>Contacto</th>
+            <th>Estado</th>
+            <th>Usuario Creador</th>
+            <th>Creado</th>
             <th></th>
         </tr>
     </thead>
@@ -17,15 +21,19 @@
         {% for taller in talleres %}
         <tr>
             <td>{{ taller.nombre }}</td>
+            <td>{{ taller.razon_social }}</td>
+            <td>{{ taller.rut }}</td>
             <td>{{ taller.direccion|default:"-" }}</td>
             <td>{{ taller.telefono|default:"-" }}</td>
-            <td>{{ taller.contacto|default:"-" }}</td>
+            <td>{{ taller.get_estado_display }}</td>
+            <td>{{ taller.usuario_creador|default:"-" }}</td>
+            <td>{{ taller.fecha_creacion|date:"d/m/Y H:i" }}</td>
             <td>
                 <a href="{% url 'mantenimiento:taller_update' taller.id %}" class="btn btn-sm btn-outline-secondary">Editar</a>
             </td>
         </tr>
         {% empty %}
-        <tr><td colspan="5">No hay talleres registrados.</td></tr>
+        <tr><td colspan="9">No hay talleres registrados.</td></tr>
         {% endfor %}
     </tbody>
 </table>

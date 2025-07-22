@@ -1,3 +1,52 @@
+// AJAX para detalle de vehículo
+document.addEventListener('DOMContentLoaded', function () {
+    const patenteSelect = document.getElementById('id_vehiculo');
+    if (patenteSelect) {
+        patenteSelect.addEventListener('change', function () {
+            const vehiculoId = this.value;
+            if (vehiculoId) {
+                fetch(`/mantenimiento/vehiculo_info/?vehiculo_id=${vehiculoId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        let html = '';
+                        if (data.error) {
+                            html = `<span class="text-danger">${data.error}</span>`;
+                        } else {
+                            html = `
+                                <ul class="list-unstyled">
+                                    <li><strong>Marca:</strong> ${data.marca || ''}</li>
+                                    <li><strong>Modelo:</strong> ${data.modelo || ''}</li>
+                                    <li><strong>Año:</strong> ${data.anio_modelo || ''}</li>
+                                    <li><strong>Tracción:</strong> ${data.traccion || ''}</li>
+                                    <li><strong>VIN:</strong> ${data.vin || ''}</li>
+                                    <li><strong>Color:</strong> ${data.color || ''}</li>
+                                    <li><strong>Cliente:</strong> ${data.cliente || '-'}</li>
+                                </ul>
+                            `;
+                        }
+                        document.getElementById('vehiculo-info').innerHTML = html;
+                    });
+            } else {
+                document.getElementById('vehiculo-info').innerHTML = '<span class="text-muted">Seleccione una patente para ver los datos.</span>';
+            }
+        });
+
+        // Dispara el cambio al cargar si hay valor seleccionado
+        if (patenteSelect.value) {
+            patenteSelect.dispatchEvent(new Event('change'));
+        }
+    }
+
+    // Preview de número de OT (solo como sugerencia)
+    const previewSpan = document.getElementById('preview-ot-numero');
+    if (previewSpan) {
+        fetch('/mantenimiento/next_ot_numero/')
+            .then(r => r.json())
+            .then(data => {
+                previewSpan.textContent = data.numero_orden || '(Pendiente)';
+            });
+    }
+});
 // Este archivo agrega funcionalidad dinámica a los formsets de trabajos realizados y repuestos/insumos
 // Requiere que los IDs de las tablas sean 'trabajos-table' y 'repuestos-table'
 // Requiere que los formsets tengan el atributo 'prefix' (ej: 'trabajos', 'repuestos')

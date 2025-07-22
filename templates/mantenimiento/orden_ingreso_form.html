@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Nueva Orden de Ingreso{% endblock %}
+
+{% block extra_head %}
+<style>
+    .orden-card {
+        border-radius: 1.25rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    .orden-section-title {
+        font-weight: bold;
+        font-size: 1.13rem;
+        color: #0d6efd;
+        letter-spacing: .5px;
+        margin-bottom: .7rem;
+        display: flex;
+        align-items: center;
+        gap: .5em;
+    }
+    .orden-section-title i {
+        color: #0d6efd;
+        margin-right: .15em;
+    }
+    .btn-add {
+        background: #0d6efd;
+        color: #fff;
+        border-radius: 1.3em;
+        font-weight: 500;
+        padding: .3em 1.2em;
+        transition: 0.2s;
+    }
+    .btn-add:hover {
+        background: #003b80;
+        color: #fff;
+    }
+    .table th {
+        background: #e9f1fa;
+        color: #0056b3;
+    }
+    .table-hover tbody tr:hover {
+        background-color: #f7fbff;
+    }
+    .orden-form-label {
+        font-weight: 500;
+        color: #0056b3;
+        margin-bottom: 0;
+    }
+    .orden-form-group {
+        margin-bottom: 1rem;
+    }
+    #vehiculo-info .card {
+        border-radius: 1rem;
+        background: #f8fafc;
+        border: none;
+    }
+    #vehiculo-info h6 {
+        color: #0d6efd;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    /* Badge OI resalta */
+    .badge-ot {
+        background: #28a745;
+        color: #fff;
+        padding: 0.7em 1.3em;
+        border-radius: 1.3em;
+        font-size: 1.18em;
+        font-weight: bold;
+        letter-spacing: 1.5px;
+        box-shadow: 0 2px 9px rgba(40,167,69,0.08);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if alerta_mantenimiento %}
+      <div class="alert alert-warning">{{ alerta_mantenimiento }}</div>
+    {% endif %}
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card orden-card mb-3">
+                <div class="card-body">
+                    <div class="mb-3 text-end">
+                        <span class="badge badge-ot">
+                            <i class="fa fa-hashtag"></i>
+                            Nº OI:
+                            {% if form.instance.pk %}
+                                {{ form.instance.numero_orden }}
+                            {% else %}
+                                <span id="preview-oi-numero">(Pendiente)</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <form method="post" autocomplete="off">
+                        {% csrf_token %}
+                        <div class="orden-section-title mb-3"><i class="fa fa-plus-circle"></i> Nueva Orden de Ingreso</div>
+                        <div class="orden-form-group">
+                            <label class="orden-form-label" for="{{ form.vehiculo.id_for_label }}">
+                                <i class="fa fa-car"></i> {{ form.vehiculo.label }}
+                            </label>
+                            {{ form.vehiculo|add_class:"form-select" }}
+                        </div>
+                        <div class="orden-form-group">
+                            <label class="orden-form-label" for="{{ form.fecha_ingreso.id_for_label }}">
+                                <i class="fa fa-calendar"></i> {{ form.fecha_ingreso.label }}
+                            </label>
+                            {{ form.fecha_ingreso|add_class:"form-control" }}
+                        </div>
+                        <div class="orden-form-group">
+                            <label class="orden-form-label" for="{{ form.tipo_mantenimiento.id_for_label }}">
+                                <i class="fa fa-tags"></i> {{ form.tipo_mantenimiento.label }}
+                            </label>
+                            {{ form.tipo_mantenimiento|add_class:"form-select" }}
+                        </div>
+                        <div class="orden-form-group">
+                            <label class="orden-form-label" for="{{ form.taller.id_for_label }}">
+                                <i class="fa fa-warehouse"></i> {{ form.taller.label }}
+                            </label>
+                            {{ form.taller|add_class:"form-select" }}
+                        </div>
+                        <div class="orden-form-group">
+                            <label class="orden-form-label" for="{{ form.kilometraje_actual.id_for_label }}">
+                                <i class="fa fa-tachometer"></i> {{ form.kilometraje_actual.label }}
+                            </label>
+                            {{ form.kilometraje_actual|add_class:"form-control" }}
+                        </div>
+                        <hr>
+                        <div class="orden-section-title mb-3"><i class="fa fa-cogs"></i> Trabajos/Revisiones Solicitados</div>
+                        <div class="mb-2 text-end">
+                            <button type="button" class="btn btn-add btn-sm" id="add-trabajo-btn">
+                                <i class="fa fa-plus"></i> Añadir Trabajo/Revisión
+                            </button>
+                        </div>
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Descripción del trabajo</th>
+                                    <th style="width:80px;">Eliminar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{ formset.management_form }}
+                                {% for form in formset %}
+                                <tr>
+                                    <td>
+                                        {{ form.descripcion|add_class:"form-control" }}
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        {% if form.instance.pk %}
+                                            <input type="checkbox" name="{{ form.prefix }}-DELETE">
+                                        {% else %}
+                                            <button type="button" class="btn btn-danger btn-sm remove-trabajo" tabindex="-1"><i class="fa fa-trash"></i></button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <div class="mt-4 text-center">
+                            <button type="submit" class="btn btn-primary btn-lg px-5 shadow"><i class="fa fa-save"></i> Guardar Orden de Ingreso</button>
+                            {% if form.instance.pk and form.instance.estado != "CANCELADA" %}
+                            <form method="post" action="{% url 'mantenimiento:orden_ingreso_cancelar' form.instance.pk %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button class="btn btn-danger" type="submit">
+                                    <i class="fa fa-ban"></i> Cancelar OI
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'mantenimiento:orden_ingreso_convertir_ot' form.instance.pk %}" style="display:inline; margin-left: 0.5em;">
+                                {% csrf_token %}
+                                <button class="btn btn-success" type="submit">
+                                    <i class="fa fa-exchange-alt"></i> Convertir en OT
+                                </button>
+                            </form>
+                            {% elif form.instance.pk and form.instance.estado == "CANCELADA" %}
+                            <span class="badge bg-danger text-white ms-2">Orden Cancelada</span>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div id="vehiculo-info" class="card p-3 mb-3">
+                <h6><i class="fa fa-info-circle"></i> Información del vehículo</h6>
+                <div id="info-basica">
+                    <span class='text-muted'>Seleccione una patente para ver los datos.</span>
+                </div>
+                <div id="cliente-actual"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Botón para agregar trabajo/revisión
+    let addTrabajoBtn = document.getElementById('add-trabajo-btn');
+    let trabajosTable = document.querySelector('.table tbody');
+    let totalForms = document.querySelector('[name="trabajos-TOTAL_FORMS"]');
+    addTrabajoBtn.addEventListener('click', function() {
+        let formIdx = parseInt(totalForms.value);
+        let emptyRow = `
+            <tr>
+                <td><input type="text" name="trabajos-${formIdx}-descripcion" class="form-control"></td>
+                <td class="text-center align-middle">
+                    <button type="button" class="btn btn-danger btn-sm remove-trabajo" tabindex="-1"><i class="fa fa-trash"></i></button>
+                </td>
+            </tr>
+        `;
+        trabajosTable.insertAdjacentHTML('beforeend', emptyRow);
+        totalForms.value = formIdx + 1;
+    });
+
+    // Eliminar fila de trabajo agregada dinámicamente
+    trabajosTable.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-trabajo')) {
+            e.target.closest('tr').remove();
+        }
+    });
+
+    // AJAX para info de vehículo y kilometraje actual
+    let vehiculoSelect = document.getElementById('id_vehiculo');
+    let kmInput = document.getElementById('id_kilometraje_actual');
+    if(vehiculoSelect){
+        vehiculoSelect.addEventListener('change', function() {
+            let vehiculoId = this.value;
+            let infoDiv = document.getElementById('info-basica');
+            let clienteDiv = document.getElementById('cliente-actual');
+            if (!vehiculoId) {
+                infoDiv.innerHTML = "<span class='text-muted'>Seleccione una patente para ver los datos.</span>";
+                clienteDiv.innerHTML = "";
+                if (kmInput) kmInput.value = '';
+                return;
+            }
+            fetch("{% url 'mantenimiento:vehiculo_info' %}?vehiculo_id=" + vehiculoId)
+            .then(response => response.json())
+            .then(data => {
+                if(data.error) {
+                    infoDiv.innerHTML = "<span class='text-danger'>" + data.error + "</span>";
+                    clienteDiv.innerHTML = "";
+                } else {
+                    infoDiv.innerHTML = `<b>Patente:</b> ${data.patente} <br>
+                                         <b>Marca:</b> ${data.marca} <br>
+                                         <b>Modelo:</b> ${data.modelo} <br>
+                                         <b>Año modelo:</b> ${data.anio_modelo || '-'}<br>
+                                         <b>VIN/Chasis:</b> ${data.vin || '-'}`;
+                    clienteDiv.innerHTML = data.cliente ? `<b>Cliente actual:</b> <span class="text-primary">${data.cliente}</span>` : "";
+                }
+            });
+            // Autocompletar kilometraje actual
+            if (kmInput) {
+                fetch('/flota/api/kilometraje_actual/?vehiculo_id=' + vehiculoId)
+                    .then(r => r.json())
+                    .then(data => {
+                        kmInput.value = data.kilometraje || 0;
+                    });
+            }
+        });
+        // Si hay un valor seleccionado al cargar, dispara el evento
+        if(vehiculoSelect.value) {
+            vehiculoSelect.dispatchEvent(new Event('change'));
+        }
+    }
+    // Autocompletar kilometraje_actual por AJAX al seleccionar vehículo
+    const kmInput2 = document.getElementById('{{ form.kilometraje_actual.id_for_label }}');
+    if (vehiculoSelect && kmInput2) {
+        vehiculoSelect.addEventListener('change', function() {
+            const vehiculoId = this.value;
+            if (vehiculoId) {
+                fetch(`/flota/api/kilometraje_actual/?vehiculo_id=${vehiculoId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        kmInput2.value = data.kilometraje || '';
+                    });
+            } else {
+                kmInput2.value = '';
+            }
+        });
+        // Trigger al cargar si ya hay valor
+        if (vehiculoSelect.value) {
+            vehiculoSelect.dispatchEvent(new Event('change'));
+        }
+    }
+});
+</script>
+{% endblock %}

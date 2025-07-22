@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load widget_tweaks %}
 {% block title %}Iniciar Sesión | RentaCOS{% endblock %}
 
 {% block content %}
@@ -21,14 +22,14 @@
             <label for="{{ form.username.id_for_label }}" class="form-label">Usuario</label>
             <div class="input-group">
               <span class="input-group-text"><i class="fa fa-user"></i></span>
-              {{ form.username.as_widget(attrs={'class': 'form-control'}) }}
+              {{ form.username|add_class:"form-control" }}
             </div>
           </div>
           <div class="mb-3">
             <label for="{{ form.password.id_for_label }}" class="form-label">Contraseña</label>
             <div class="input-group">
               <span class="input-group-text"><i class="fa fa-lock"></i></span>
-              {{ form.password.as_widget(attrs={'class': 'form-control'}) }}
+              {{ form.password|add_class:"form-control" }}
             </div>
           </div>
           <button type="submit" class="btn btn-primary w-100">

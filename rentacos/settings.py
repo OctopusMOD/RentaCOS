@@ -9,9 +9,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-tu-clave-secreta-aqui-cambiala-en-produccion'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+DEBUG = True
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'django_filters',
+    'widget_tweaks',  # Habilita widget_tweaks en los templates
 
     # Local apps
     'apps.alquiler',
@@ -38,7 +39,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -67,12 +67,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'rentacos.wsgi.application'
 
-# Database
+# Base de datos
 DATABASES = {
-    'default': dj_database_url.config(default=os.getenv('DATABASE_URL'), conn_max_age=600)
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'rentacos',    # nombre que quieras para tu base de datos
+        'USER': 'postgres',       # Tu usuario de PostgreSQL
+        'PASSWORD': '26549460',    # Tu clave de PostgreSQL
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
 }
 
-# Password validation
+# Validación de contraseñas
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -88,28 +95,29 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Internationalization
+# Internacionalización
 LANGUAGE_CODE = 'es-cl'
 TIME_ZONE = 'America/Santiago'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-STATIC_URL = '/static/'
+# Archivos estáticos (CSS, JavaScript, Imágenes)
+STATIC_URL = 'static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files
+# Archivos de medios
 MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Default primary key field type
+# Tipo de clave primaria por defecto
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Crispy Forms: usando Bootstrap 5
 CRISPY_ALLOWED_TEMPLATE_PACKS = ["bootstrap5"]
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-# Login URLs
-LOGIN_REDIRECT_URL = '/'
-LOGIN_URL = 'login'
+# URLs de inicio de sesión
+LOGIN_URL = 'login'  # o '/accounts/login/' si usas la ruta por defecto
+LOGIN_REDIRECT_URL = 'home'  # o la ruta que quieras tras login exitoso
+LOGOUT_REDIRECT_URL = 'login'

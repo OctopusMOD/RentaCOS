@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Órdenes de Ingreso a Taller{% endblock %}
+{% block content %}
+<div class="container">
+  <h2>Órdenes de Ingreso a Taller</h2>
+  <a href="{% url 'mantenimiento:orden_ingreso_nueva' %}" class="btn btn-success mb-3">Nueva Orden de Ingreso</a>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Número</th>
+        <th>Vehículo</th>
+        <th>Fecha Ingreso</th>
+        <th>Tipo Mantenimiento</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for orden in ordenes %}
+      <tr>
+        <td>{{ orden.numero_orden }}</td>
+        <td>{{ orden.vehiculo }}</td>
+        <td>{{ orden.fecha_ingreso|date:'d/m/Y H:i' }}</td>
+        <td>{{ orden.tipo_mantenimiento }}</td>
+        <td>
+          <a href="{% url 'mantenimiento:orden_ingreso_detalle' orden.pk %}" class="btn btn-info btn-sm">Ver</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">No hay órdenes de ingreso registradas.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

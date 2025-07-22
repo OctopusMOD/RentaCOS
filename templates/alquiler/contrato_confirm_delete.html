@@ -1,33 +1,27 @@
 {% extends 'base.html' %}
 
-{% block title %}Eliminar Contrato {{ contrato.numero_contrato }} - RentaCOS{% endblock %}
+{% block title %}Cancelar Contrato {{ contrato.numero_contrato }} - RentaCOS{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
     <div class="card shadow">
-        <div class="card-header bg-danger text-white">
-            <h4 class="mb-0">Confirmar Eliminación de Contrato</h4>
+        <div class="card-header bg-warning text-dark">
+            <h4 class="mb-0">Confirmar Cancelación de Contrato</h4>
         </div>
         <div class="card-body">
-            <p>¿Estás seguro que deseas eliminar el contrato <strong>{{ contrato.numero_contrato }}</strong>?</p>
-            {% if contrato.estado != "BORRADOR" %}
-                <div class="alert alert-warning">
-                    Sólo puedes eliminar contratos en estado <strong>BORRADOR</strong>.
-                </div>
+            <p>¿Estás seguro que deseas <strong>cancelar</strong> el contrato <strong>{{ contrato.numero_contrato }}</strong>?</p>
+            <div class="alert alert-danger">
+                Esta acción cambiará el estado del contrato a <strong>CANCELADO</strong> y no podrá ser revertida.
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fa fa-ban"></i> Sí, cancelar contrato
+                </button>
                 <a href="{% url 'alquiler:contrato_detail' contrato.pk %}" class="btn btn-secondary">
-                    <i class="fa fa-arrow-left"></i> Volver
+                    <i class="fa fa-times"></i> Volver
                 </a>
-            {% else %}
-                <form method="post">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fa fa-trash"></i> Eliminar
-                    </button>
-                    <a href="{% url 'alquiler:contrato_detail' contrato.pk %}" class="btn btn-secondary">
-                        <i class="fa fa-times"></i> Cancelar
-                    </a>
-                </form>
-            {% endif %}
+            </form>
         </div>
     </div>
 </div>

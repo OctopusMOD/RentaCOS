@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Tipos de Mantenimiento{% endblock %}
+{% block content %}
+<h2>Tipos de Mantenimiento</h2>
+<a class="btn btn-primary mb-3" href="{% url 'mantenimiento:tipo_create' %}">Nuevo Tipo</a>
+<table class="table table-sm table-bordered">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>¿Preventivo?</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tipo in tipos %}
+        <tr>
+            <td>{{ tipo.nombre }}</td>
+            <td>{{ tipo.es_preventivo|yesno:"Sí,No" }}</td>
+            <td>
+                <a href="{% url 'mantenimiento:tipo_update' tipo.id %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3">No hay tipos registrados.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

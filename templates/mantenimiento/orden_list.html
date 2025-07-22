@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Órdenes de Mantenimiento{% endblock %}
+{% block content %}
+<h2>Órdenes de Mantenimiento</h2>
+<a class="btn btn-primary mb-3" href="{% url 'mantenimiento:orden_create' %}">Nueva Orden</a>
+<table class="table table-sm table-bordered">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Vehículo</th>
+            <th>Tipo</th>
+            <th>Estado</th>
+            <th>Ingreso</th>
+            <th>Salida</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for orden in ordenes %}
+        <tr>
+            <td>{{ orden.id }}</td>
+            <td>{{ orden.vehiculo }}</td>
+            <td>{{ orden.tipo }}</td>
+            <td>{{ orden.get_estado_display }}</td>
+            <td>{{ orden.fecha_ingreso }}</td>
+            <td>{{ orden.fecha_salida|default:"-" }}</td>
+            <td>
+                <a href="{% url 'mantenimiento:orden_detail' orden.id %}" class="btn btn-sm btn-info">Ver</a>
+                <a href="{% url 'mantenimiento:orden_update' orden.id %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7">No hay órdenes registradas.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

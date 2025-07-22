@@ -1,17 +1,62 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Bienvenido a RentaCOS</title>
-</head>
-<body>
-    <h1>Bienvenido a RentaCOS</h1>
-    <p>Sistema de gestión de alquileres.</p>
-    <ul>
-        <li><a href="{% url 'alquiler:factura_list' %}">Facturas</a></li>
-        <li><a href="{% url 'alquiler:cliente_list' %}">Clientes</a></li>
-        <li><a href="{% url 'alquiler:contrato_list' %}">Contratos</a></li>
-        <li><a href="{% url 'alquiler:reserva_list' %}">Reservas</a></li>
-    </ul>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Bienvenido a RentaCOS{% endblock %}
+
+{% block content %}
+<div class="text-center my-5">
+    <h1 class="display-3 fw-bold mb-4">¡Bienvenido a <span class="text-primary">RentaCOS</span>!</h1>
+    <p class="lead mb-5">Sistema de gestión de alquiler, flota, mantenimiento, finanzas y administración.</p>
+    <div class="row justify-content-center g-4">
+        <div class="col-12 col-md-2">
+            <a href="{% url 'alquiler:dashboard' %}" class="text-decoration-none">
+                <div class="card shadow h-100 py-4 hover-shadow border-0">
+                    <div class="card-body">
+                        <i class="fa fa-building fa-3x text-primary mb-2"></i>
+                        <h5 class="card-title mt-2">Alquiler</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-12 col-md-2">
+            <a href="{% url 'flota:dashboard_flota' %}" class="text-decoration-none">
+                <div class="card shadow h-100 py-4 hover-shadow border-0">
+                    <div class="card-body">
+                        <i class="fa fa-car fa-3x text-success mb-2"></i>
+                        <h5 class="card-title mt-2">Flota</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-12 col-md-2">
+            <a href="{% url 'mantenimiento:dashboard_mantenimiento' %}" class="text-decoration-none">
+                <div class="card shadow h-100 py-4 hover-shadow border-0">
+                    <div class="card-body">
+                        <i class="fa fa-wrench fa-3x text-warning mb-2"></i>
+                        <h5 class="card-title mt-2">Mantenimiento</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-12 col-md-2">
+            <a href="#" class="text-decoration-none">
+                <div class="card shadow h-100 py-4 hover-shadow border-0">
+                    <div class="card-body">
+                        <i class="fa fa-money fa-3x text-info mb-2"></i>
+                        <h5 class="card-title mt-2">Finanzas</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-12 col-md-2">
+            <a href="/admin/" class="text-decoration-none">
+                <div class="card shadow h-100 py-4 hover-shadow border-0">
+                    <div class="card-body">
+                        <i class="fa fa-cogs fa-3x text-secondary mb-2"></i>
+                        <h5 class="card-title mt-2">Configuración</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

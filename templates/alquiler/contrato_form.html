@@ -11,59 +11,335 @@
         <div class="card-body">
             <form method="post" enctype="multipart/form-data" novalidate>
                 {% csrf_token %}
+
+                <!-- BLOQUE NUEVO PARA ERRORES -->
                 {% if form.non_field_errors %}
-                    <div class="alert alert-danger">
-                        {{ form.non_field_errors }}
-                    </div>
+                  <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                  </div>
                 {% endif %}
-                <div class="row g-3">
-                    <div class="col-md-6 mb-3">
-                        {{ form.reserva.label_tag }}
-                        {% if reserva_preseleccionada %}
-                            <input type="text" class="form-control" value="ID {{ reserva_obj.id }} - {{ reserva_obj.cliente }}" readonly>
-                            {{ form.reserva.as_hidden }}
-                        {% else %}
-                            {{ form.reserva }}
-                        {% endif %}
-                        {{ form.reserva.errors }}
+                {% for field in form %}
+                  {% for error in field.errors %}
+                    <div class="alert alert-danger">
+                      {{ field.label }}: {{ error }}
                     </div>
-                    <div class="col-md-6 mb-3">
-                        {{ form.cliente.label_tag }}
-                        {% if reserva_preseleccionada %}
-                            <input type="text" class="form-control" value="{{ reserva_obj.cliente }}" readonly>
-                            {{ form.cliente.as_hidden }}
-                        {% else %}
-                            {{ form.cliente }}
-                        {% endif %}
-                        {{ form.cliente.errors }}
+                  {% endfor %}
+                {% endfor %}
+                <!-- FIN BLOQUE ERRORES -->
+
+                <div class="row g-4">
+                    <!-- Formulario principal a la izquierda -->
+                    <div class="col-lg-8">
+                        <!-- DATOS GENERALES -->
+                        <div class="mb-3 pb-2 border-bottom">
+                            <h5 class="fw-bold mb-3 text-primary"><i class="fa fa-id-card me-1"></i> Datos generales del contrato</h5>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    {{ form.reserva.label_tag }} 
+                                    {% if reserva_preseleccionada %}
+                                        <input type="text" class="form-control" value="ID {{ reserva_obj.id }} - {{ reserva_obj.cliente }}" readonly>
+                                        {{ form.reserva.as_hidden }}
+                                    {% else %}
+                                        {{ form.reserva }}
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.cliente.label_tag }}
+                                    {% if reserva_preseleccionada %}
+                                        <input type="text" class="form-control" value="{{ reserva_obj.cliente }}" readonly>
+                                        {{ form.cliente.as_hidden }}
+                                    {% else %}
+                                        {{ form.cliente }}
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.vehiculo.label_tag }}
+                                    {% if reserva_preseleccionada %}
+                                        <input type="text" class="form-control" value="{{ reserva_obj.vehiculo }}" readonly>
+                                        {{ form.vehiculo.as_hidden }}
+                                    {% else %}
+                                        {{ form.vehiculo }}
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.fecha_inicio.label_tag }}
+                                    {{ form.fecha_inicio }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.fecha_fin.label_tag }}
+                                    {{ form.fecha_fin }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.tarifa_diaria.label_tag }}
+                                    {{ form.tarifa_diaria }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.descuento_porcentaje.label_tag }}
+                                    {{ form.descuento_porcentaje }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.garantia.label_tag }}
+                                    {{ form.garantia }}
+                                </div>
+                            </div>
+                        </div>
+                        <!-- EXTRAS (tabla dinámica) -->
+                        <div class="mb-3 pb-2 border-bottom">
+                            <h5 class="fw-bold mb-3 text-primary"><i class="fa fa-table me-1"></i> Extras contratados</h5>
+                            <table class="table table-sm align-middle" id="tabla-extras">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Descripción</th>
+                                        <th>Valor Neto</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Filas generadas por JS -->
+                                </tbody>
+                            </table>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="agregarExtraFila()">Agregar extra</button>
+                        </div>
+                        <!-- ENTREGA -->
+                        <div class="mb-3 pb-2 border-bottom">
+                            <h5 class="fw-bold mb-3 text-primary"><i class="fa fa-truck me-1"></i> Entrega</h5>
+                            <div class="mb-2">
+                                <label for="tipo_entrega" class="form-label">Tipo de entrega</label>
+                                <select id="tipo_entrega" name="tipo_entrega" class="form-select" onchange="mostrarCamposEntrega()">
+                                    <option value="">Seleccione...</option>
+                                    <option value="terreno">Entrega en terreno</option>
+                                    <option value="oficina">Entrega en oficina</option>
+                                </select>
+                            </div>
+                            <!-- Entrega en terreno: layout compacto en dos columnas -->
+                            <div id="entrega_terreno" style="display:none;">
+                                <div class="row g-2">
+                                    <div class="col-md-8">
+                                        <label class="form-label mb-1">Dirección de entrega</label>
+                                        <input type="text" class="form-control form-control-sm" name="direccion_terreno" id="direccion_terreno" placeholder="Ej: Av. Providencia 1234, Santiago">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label mb-1">Link Google Maps <span class="small text-muted">(opcional)</span></label>
+                                        <input type="url" class="form-control form-control-sm" name="link_maps" id="link_maps" placeholder="https://maps.google.com/...">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label mb-1">Contacto</label>
+                                        <input type="text" class="form-control form-control-sm" name="contacto_terreno" id="contacto_terreno" placeholder="Nombre contacto">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label mb-1">Teléfono</label>
+                                        <input type="text" class="form-control form-control-sm" name="telefono_terreno" id="telefono_terreno" placeholder="+56 9 1234 5678">
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Entrega en oficina -->
+                            <div id="entrega_oficina" style="display:none;">
+                                <div class="row g-2">
+                                    <div class="col-md-12">
+                                        <label class="form-label mb-1">Oficina</label>
+                                        <select class="form-select form-select-sm" name="oficina" id="oficina">
+                                            <option value="oficina_1">Sucursal Central</option>
+                                            <option value="oficina_2">Sucursal Norte</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- TÉRMINOS Y DOCUMENTOS -->
+                        <div class="mb-3">
+                            <h5 class="fw-bold mb-3 text-primary"><i class="fa fa-clipboard-list me-1"></i> Términos y documentos</h5>
+                            <div class="row g-2">
+                                <div class="col-12 mb-2">
+                                    {{ form.terminos_condiciones.label_tag }}
+                                    {{ form.terminos_condiciones }}
+                                </div>
+                                <div class="col-md-8 mb-2">
+                                    {{ form.documento_pdf.label_tag }}
+                                    {{ form.documento_pdf }}
+                                </div>
+                            </div>
+                        </div>
+                        <!-- BOTONES -->
+                        <div class="mt-3 d-flex gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fa fa-save"></i> Guardar
+                            </button>
+                            <a href="{% url 'alquiler:contrato_list' %}" class="btn btn-secondary">
+                                <i class="fa fa-times"></i> Cancelar
+                            </a>
+                        </div>
                     </div>
-                    <div class="col-12 mb-3">
-                        {{ form.terminos_condiciones.label_tag }}
-                        {{ form.terminos_condiciones }}
-                        {{ form.terminos_condiciones.errors }}
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        {{ form.documento_pdf.label_tag }}
-                        {{ form.documento_pdf }}
-                        {{ form.documento_pdf.errors }}
+                    <!-- Calculadora a la derecha (no sticky) -->
+                    <div class="col-lg-4">
+                        <div class="border rounded p-3 bg-light shadow-sm mb-4">
+                            <h5 class="fw-bold mb-3 text-primary"><i class="fa fa-calculator me-1"></i> Calculadora de costos</h5>
+                            <ul class="list-group" id="resumen-costos">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Garantía:</span>
+                                    <span id="garantia_resumen">$0</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Días de arriendo:</span>
+                                    <span id="dias_arriendo">0</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Subtotal base:</span>
+                                    <span id="subtotal_base">$0</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Extras:</span>
+                                    <span id="total_extras">$0</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Delivery:</span>
+                                    <span id="total_delivery">$0</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Subtotal antes de descuento:</span>
+                                    <span id="subtotal_final">$0</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Descuento aplicado:</span>
+                                    <span id="descuento_aplicado">$0</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>IVA (19%):</span>
+                                    <span id="iva">$0</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between fw-bold">
+                                    <span>Total a pagar:</span>
+                                    <span id="total_final">$0</span>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
                 {% for hidden in form.hidden_fields %}
                     {{ hidden }}
                 {% endfor %}
-                <div class="mt-3 d-flex gap-2">
-                    <button type="submit" class="btn btn-success">
-                        <i class="fa fa-save"></i> Guardar
-                    </button>
-                    <a href="{% url 'alquiler:contrato_list' %}" class="btn btn-secondary">
-                        <i class="fa fa-times"></i> Cancelar
-                    </a>
-                </div>
             </form>
-            <a href="{% url 'alquiler:contrato_list' %}" class="btn btn-outline-secondary mt-2">
+            <a href="{% url 'alquiler:contrato_list' %}" class="btn btn-outline-secondary mt-3">
                 <i class="fa fa-arrow-left"></i> Volver al listado
             </a>
         </div>
     </div>
 </div>
+
+<script>
+// --- Extras tabla dinámica ---
+function agregarExtraFila() {
+    let tbody = document.querySelector('#tabla-extras tbody');
+    let row = document.createElement('tr');
+    row.innerHTML = `
+        <td><input name="extras_codigo[]" type="text" class="form-control form-control-sm" required></td>
+        <td><input name="extras_descripcion[]" type="text" class="form-control form-control-sm" required></td>
+        <td><input name="extras_valor[]" type="number" min="0" step="0.01" class="form-control form-control-sm" required></td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="this.closest('tr').remove(); actualizarExtrasCalculadora();">Quitar</button></td>
+    `;
+    tbody.appendChild(row);
+    actualizarExtrasCalculadora();
+}
+function actualizarExtrasCalculadora() {
+    let filas = document.querySelectorAll('#tabla-extras tbody tr');
+    let suma = 0;
+    let dias = parseInt(document.getElementById("dias_arriendo").textContent) || 1;
+    filas.forEach(function(tr){
+        let val = parseFloat(tr.querySelector('input[name="extras_valor[]"]').value || 0);
+        suma += val * dias;
+    });
+    document.getElementById("total_extras").textContent = "$" + suma.toLocaleString();
+    calcularContrato();
+}
+document.addEventListener('input', function(e){
+    if(e.target && (e.target.name === "extras_valor[]")) {
+        actualizarExtrasCalculadora();
+    }
+});
+
+// --- Entrega dinámica y autocompletado contacto/telefono ---
+function mostrarCamposEntrega() {
+    let tipo = document.getElementById('tipo_entrega').value;
+    document.getElementById('entrega_terreno').style.display = tipo === 'terreno' ? 'block' : 'none';
+    document.getElementById('entrega_oficina').style.display = tipo === 'oficina' ? 'block' : 'none';
+    if(tipo === 'terreno') autocompletarContactoCliente();
+}
+function autocompletarContactoCliente() {
+    const clienteSelect = document.getElementById('id_cliente');
+    if (!clienteSelect) return;
+    const clienteId = clienteSelect.value;
+    if (!clienteId) return;
+    fetch(`/api/clientes/${clienteId}/datos-contacto/`)
+        .then(resp => resp.json())
+        .then(data => {
+            document.getElementById('contacto_terreno').value = data.contacto || '';
+            document.getElementById('telefono_terreno').value = data.telefono || '';
+        });
+}
+document.addEventListener("DOMContentLoaded", function() {
+    const clienteSelect = document.getElementById('id_cliente');
+    if (clienteSelect) {
+        clienteSelect.addEventListener('change', function() {
+            if (document.getElementById('tipo_entrega').value === 'terreno') {
+                autocompletarContactoCliente();
+            }
+        });
+    }
+    document.getElementById('tipo_entrega').addEventListener('change', mostrarCamposEntrega);
+});
+
+// --- Calculadora ---
+function parseDecimal(val) {
+    let n = parseFloat(val);
+    return isNaN(n) ? 0 : n;
+}
+function diasArriendo(fechaIniStr, fechaFinStr) {
+    let ini = new Date(fechaIniStr);
+    let fin = new Date(fechaFinStr);
+    let dias = Math.ceil((fin - ini) / (1000 * 60 * 60 * 24));
+    return Math.max(1, dias);
+}
+function calcularContrato() {
+    let fechaIni = document.getElementById("id_fecha_inicio")?.value;
+    let fechaFin = document.getElementById("id_fecha_fin")?.value;
+    let dias = (fechaIni && fechaFin) ? diasArriendo(fechaIni, fechaFin) : 1;
+    let tarifa = parseDecimal(document.getElementById("id_tarifa_diaria")?.value);
+    let descuento = Math.min(100, Math.max(0, parseDecimal(document.getElementById("id_descuento_porcentaje")?.value || 0)));
+    let garantia = parseDecimal(document.getElementById("id_garantia")?.value);
+
+    // Sumar extras de la tabla
+    let totalExtras = 0;
+    document.querySelectorAll('#tabla-extras tbody tr').forEach(function(tr){
+        let val = parseFloat(tr.querySelector('input[name="extras_valor[]"]').value || 0);
+        totalExtras += val * dias;
+    });
+
+    // Delivery: podrías sumar costo si lo deseas aquí
+    let deliveryCost = 0;
+
+    let subtotalBase = tarifa * dias;
+    let subtotal = subtotalBase + totalExtras + deliveryCost;
+    let descuentoMonto = subtotal * (descuento / 100);
+    let subtotalConDescuento = subtotal - descuentoMonto;
+    let iva = subtotalConDescuento * 0.19;
+    let total = subtotalConDescuento + iva + garantia;
+
+    document.getElementById("dias_arriendo").textContent = dias;
+    document.getElementById("subtotal_base").textContent = "$" + subtotalBase.toLocaleString();
+    document.getElementById("total_extras").textContent = "$" + totalExtras.toLocaleString();
+    document.getElementById("total_delivery").textContent = "$" + deliveryCost.toLocaleString();
+    document.getElementById("subtotal_final").textContent = "$" + subtotal.toLocaleString();
+    document.getElementById("descuento_aplicado").textContent = "-$" + descuentoMonto.toLocaleString();
+    document.getElementById("iva").textContent = "$" + iva.toLocaleString();
+    document.getElementById("garantia_resumen").textContent = "$" + garantia.toLocaleString();
+    document.getElementById("total_final").textContent = "$" + total.toLocaleString();
+}
+document.addEventListener("DOMContentLoaded", function() {
+    ["id_fecha_inicio", "id_fecha_fin", "id_tarifa_diaria", "id_descuento_porcentaje", "id_garantia"].forEach(function(id) {
+        let el = document.getElementById(id);
+        if (el) el.addEventListener("input", calcularContrato);
+    });
+    calcularContrato();
+});
+</script>
 {% endblock %}

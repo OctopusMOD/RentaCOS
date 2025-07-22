@@ -15,7 +15,8 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{% url 'alquiler:dashboard' %}">RentaCOS</a>
+            <!-- Ajuste: el botón RentaCOS lleva a la página de inicio (home) -->
+            <a class="navbar-brand" href="{% url 'home' %}">RentaCOS</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -135,6 +136,11 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="moduloMantenimientoDropdown">
                             <li>
+                                <a class="dropdown-item" href="{% url 'mantenimiento:dashboard_mantenimiento' %}">
+                                    <i class="fa fa-tachometer"></i> Dashboard
+                                </a>
+                            </li>
+                            <li>
                                 <a class="dropdown-item" href="{% url 'mantenimiento:orden_list' %}">
                                     <i class="fa fa-list"></i> Órdenes de Mantenimiento
                                 </a>
@@ -142,6 +148,16 @@
                             <li>
                                 <a class="dropdown-item" href="{% url 'mantenimiento:orden_create' %}">
                                     <i class="fa fa-plus"></i> Nueva Orden
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'mantenimiento:orden_ingreso_nueva' %}">
+                                    <i class="fa fa-sign-in"></i> Nueva Orden de Ingreso
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'mantenimiento:orden_ingreso_list' %}">
+                                    <i class="fa fa-list-alt"></i> Listado de Órdenes de Ingreso
                                 </a>
                             </li>
                             <li>
@@ -160,11 +176,7 @@
                                     <i class="fa fa-tags"></i> Tipos de Mantenimiento
                                 </a>
                             </li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'mantenimiento:repuesto_list' %}">
-                                    <i class="fa fa-cogs"></i> Repuestos
-                                </a>
-                            </li>
+                            <!-- Eliminado el enlace a repuesto_list que ya no existe -->
                         </ul>
                     </li>
                 </ul>

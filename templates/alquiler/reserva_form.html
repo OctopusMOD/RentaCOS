@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load form_tags %}
+{% load form_filters %}
 
 {% block title %}{{ title }} - RentaCOS{% endblock %}
 
@@ -24,31 +24,37 @@
                         {{ form.cliente }}
                         {{ form.cliente.errors }}
                     </div>
-                    {#
                     <div class="col-md-6 mb-3">
                         {{ form.vehiculo.label_tag }}
-                        {{ form.vehiculo }}
+                        {{ form.vehiculo|add_class:'form-select' }}
                         {{ form.vehiculo.errors }}
                     </div>
-                    #}
+                    <div class="col-12 mb-3" id="vehiculo-info" style="display:none;">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">Información del Vehículo</div>
+                            <div class="card-body" id="vehiculo-info-body">
+                                <!-- Aquí se muestra la info del vehículo -->
+                            </div>
+                        </div>
+                    </div>
                     <div class="col-md-6 mb-3">
                         {{ form.fecha_inicio.label_tag }}
-                        {{ form.fecha_inicio }}
+                        {{ form.fecha_inicio|add_class:'form-control' }}
                         {{ form.fecha_inicio.errors }}
                     </div>
                     <div class="col-md-6 mb-3">
                         {{ form.fecha_fin.label_tag }}
-                        {{ form.fecha_fin }}
+                        {{ form.fecha_fin|add_class:'form-control' }}
                         {{ form.fecha_fin.errors }}
                     </div>
                     <div class="col-md-6 mb-3">
                         {{ form.estado.label_tag }}
-                        {{ form.estado }}
+                        {{ form.estado|add_class:'form-select' }}
                         {{ form.estado.errors }}
                     </div>
                     <div class="col-12 mb-3">
                         {{ form.observaciones.label_tag }}
-                        {{ form.observaciones }}
+                        {{ form.observaciones|add_class:'form-control' }}
                         {{ form.observaciones.errors }}
                     </div>
                 </div>
@@ -75,19 +81,61 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Validación de fechas
     const fechaInicioInput = document.getElementById('id_fecha_inicio');
     const fechaFinInput = document.getElementById('id_fecha_fin');
-    if (!fechaInicioInput || !fechaFinInput) return;
-    const today = new Date();
-    const todayStr = today.toISOString().slice(0, 16);
-    fechaInicioInput.min = todayStr;
-    fechaFinInput.min = todayStr;
-    fechaInicioInput.addEventListener('change', function() {
-        fechaFinInput.min = this.value;
-        if (fechaFinInput.value && fechaFinInput.value <= this.value) {
-            fechaFinInput.value = '';
+    if (fechaInicioInput && fechaFinInput) {
+        const today = new Date();
+        const todayStr = today.toISOString().slice(0, 16);
+        fechaInicioInput.min = todayStr;
+        fechaFinInput.min = todayStr;
+        fechaInicioInput.addEventListener('change', function() {
+            fechaFinInput.min = this.value;
+            if (fechaFinInput.value && fechaFinInput.value <= this.value) {
+                fechaFinInput.value = '';
+            }
+        });
+    }
+
+    // AJAX para mostrar info del vehículo
+    const vehiculoSelect = document.getElementById('id_vehiculo');
+    const vehiculoInfo = document.getElementById('vehiculo-info');
+    const vehiculoInfoBody = document.getElementById('vehiculo-info-body');
+    if (vehiculoSelect) {
+        vehiculoSelect.addEventListener('change', function() {
+            const vehiculoId = this.value;
+            if (!vehiculoId) {
+                vehiculoInfo.style.display = 'none';
+                vehiculoInfoBody.innerHTML = '';
+                return;
+            }
+            fetch(`/alquiler/api/vehiculo/${vehiculoId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.patente) {
+                        vehiculoInfoBody.innerHTML = `
+                            <strong>Patente:</strong> ${data.patente}<br>
+                            <strong>Marca:</strong> ${data.marca}<br>
+                            <strong>Modelo:</strong> ${data.modelo}<br>
+                            <strong>Año:</strong> ${data.anio}<br>
+                            <strong>Color:</strong> ${data.color}<br>
+                            <strong>Transmisión:</strong> ${data.transmision}<br>
+                            <strong>Combustible:</strong> ${data.combustible}<br>
+                            <strong>Kilometraje:</strong> ${data.kilometraje}<br>
+                        `;
+                        vehiculoInfo.style.display = '';
+                    } else {
+                        vehiculoInfoBody.innerHTML = "No se encontró información.";
+                        vehiculoInfo.style.display = '';
+                    }
+                });
+        });
+        // Si el campo ya tiene un valor (al editar), dispara el evento para mostrar info
+        if (vehiculoSelect.value) {
+            var event = new Event('change');
+            vehiculoSelect.dispatchEvent(event);
         }
-    });
+    }
 });
 </script>
 {% endblock %}

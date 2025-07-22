@@ -1,25 +1,39 @@
-from django.urls import reverse_lazy
+from django.http import JsonResponse
+from django.urls import reverse_lazy, reverse
 from django.views.generic import (
     ListView, CreateView, UpdateView, DeleteView, DetailView
 )
 from django_filters.views import FilterView
-from django.shortcuts import redirect, get_object_or_404
+from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib import messages
 from django.views.decorators.http import require_POST
-from django.urls import reverse
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
-
 import json
 
 from .models import Vehiculo, Marca, ModeloVehiculo, GrupoVehiculo, KilometrajeVehiculo
 from .forms import VehiculoForm, MarcaForm, ModeloVehiculoForm, GrupoVehiculoForm, KilometrajeVehiculoForm
 from .filters import VehiculoFilter, KilometrajeVehiculoFilter
+from django.utils.decorators import method_decorator
 
+# --- API: Obtener kilometraje actual de un vehículo ---
+@login_required
+def api_kilometraje_actual(request):
+    vehiculo_id = request.GET.get('vehiculo_id')
+    km = 0
+    if vehiculo_id:
+        try:
+            vehiculo = Vehiculo.objects.get(pk=vehiculo_id)
+            km = vehiculo.kilometraje_actual
+        except Vehiculo.DoesNotExist:
+            pass
+    return JsonResponse({'kilometraje': km})
+
+# --- Vehículo CRUD y Dashboard protegidos ---
+@method_decorator(login_required, name='dispatch')
 class VehiculoListView(FilterView):
     model = Vehiculo
     template_name = "flota/vehiculo_list.html"
@@ -27,11 +41,13 @@ class VehiculoListView(FilterView):
     paginate_by = 15
     filterset_class = VehiculoFilter
 
+@method_decorator(login_required, name='dispatch')
 class VehiculoDetailView(DetailView):
     model = Vehiculo
     template_name = "flota/vehiculo_detail.html"
     context_object_name = "vehiculo"
 
+@method_decorator(login_required, name='dispatch')
 class VehiculoCreateView(CreateView):
     model = Vehiculo
     form_class = VehiculoForm
@@ -56,6 +72,7 @@ class VehiculoCreateView(CreateView):
         context['modelos_por_marca_json'] = json.dumps(modelos_por_marca)
         return context
 
+@method_decorator(login_required, name='dispatch')
 class VehiculoUpdateView(UpdateView):
     model = Vehiculo
     form_class = VehiculoForm
@@ -80,84 +97,99 @@ class VehiculoUpdateView(UpdateView):
         context['modelos_por_marca_json'] = json.dumps(modelos_por_marca)
         return context
 
+@method_decorator(login_required, name='dispatch')
 class VehiculoDeleteView(DeleteView):
     model = Vehiculo
     template_name = "flota/vehiculo_confirm_delete.html"
     success_url = reverse_lazy('flota:vehiculo_list')
 
-# Marca CRUD
+# --- Marca CRUD ---
+@method_decorator(login_required, name='dispatch')
 class MarcaListView(ListView):
     model = Marca
     template_name = "flota/marca_list.html"
     context_object_name = "marcas"
     paginate_by = 20
 
+@method_decorator(login_required, name='dispatch')
 class MarcaCreateView(CreateView):
     model = Marca
     form_class = MarcaForm
     template_name = "flota/marca_form.html"
     success_url = reverse_lazy('flota:marca_list')
 
+@method_decorator(login_required, name='dispatch')
 class MarcaUpdateView(UpdateView):
     model = Marca
     form_class = MarcaForm
     template_name = "flota/marca_form.html"
     success_url = reverse_lazy('flota:marca_list')
 
+@method_decorator(login_required, name='dispatch')
 class MarcaDeleteView(DeleteView):
     model = Marca
     template_name = "flota/marca_confirm_delete.html"
     success_url = reverse_lazy('flota:marca_list')
 
-# ModeloVehiculo CRUD
+# --- ModeloVehiculo CRUD ---
+@method_decorator(login_required, name='dispatch')
 class ModeloVehiculoListView(ListView):
     model = ModeloVehiculo
     template_name = "flota/modelo_list.html"
     context_object_name = "modelos"
     paginate_by = 20
 
+@method_decorator(login_required, name='dispatch')
 class ModeloVehiculoCreateView(CreateView):
     model = ModeloVehiculo
     form_class = ModeloVehiculoForm
     template_name = "flota/modelo_form.html"
     success_url = reverse_lazy('flota:modelo_list')
 
+@method_decorator(login_required, name='dispatch')
 class ModeloVehiculoUpdateView(UpdateView):
     model = ModeloVehiculo
     form_class = ModeloVehiculoForm
     template_name = "flota/modelo_form.html"
     success_url = reverse_lazy('flota:modelo_list')
 
+@method_decorator(login_required, name='dispatch')
 class ModeloVehiculoDeleteView(DeleteView):
     model = ModeloVehiculo
     template_name = "flota/modelo_confirm_delete.html"
     success_url = reverse_lazy('flota:modelo_list')
 
-# GrupoVehiculo CRUD
+# --- GrupoVehiculo CRUD ---
+@method_decorator(login_required, name='dispatch')
 class GrupoVehiculoListView(ListView):
     model = GrupoVehiculo
     template_name = "flota/grupo_list.html"
     context_object_name = "grupos"
     paginate_by = 20
 
+@method_decorator(login_required, name='dispatch')
 class GrupoVehiculoCreateView(CreateView):
     model = GrupoVehiculo
     form_class = GrupoVehiculoForm
     template_name = "flota/grupo_form.html"
     success_url = '/flota/grupos/'
 
+@method_decorator(login_required, name='dispatch')
 class GrupoVehiculoUpdateView(UpdateView):
     model = GrupoVehiculo
     form_class = GrupoVehiculoForm
     template_name = "flota/grupo_form.html"
     success_url = '/flota/grupos/'
 
+@method_decorator(login_required, name='dispatch')
 class GrupoVehiculoDeleteView(DeleteView):
     model = GrupoVehiculo
     template_name = "flota/grupo_confirm_delete.html"
     success_url = '/flota/grupos/'
 
+# --- Cambiar estado de Vehículo ---
 @require_POST
+@login_required
 def cambiar_estado_vehiculo(request, pk):
     vehiculo = get_object_or_404(Vehiculo, pk=pk)
     nuevo_estado_general = request.POST.get('estado_general')
@@ -176,7 +208,7 @@ def cambiar_estado_vehiculo(request, pk):
         messages.error(request, "Estado o subestado no válido")
     return redirect(request.META.get("HTTP_REFERER", reverse('flota:vehiculo_list')))
 
-# KilometrajeVehiculo CRUD
+# --- KilometrajeVehiculo CRUD ---
 @login_required
 def lista_kilometrajes(request):
     kilometrajes = KilometrajeVehiculo.objects.select_related('vehiculo', 'usuario', 'cliente').order_by('-fecha')
@@ -349,8 +381,6 @@ def dashboard_flota(request):
         'docs_por_vencer': docs_por_vencer,
         'docs_vencidos': docs_vencidos,
         'ultimos_kilometrajes': ultimos_kilometrajes,
-    }
-    context.update({
         'alertas_criticas': alertas_criticas,
-    })
+    }
     return render(request, "flota/dashboard_flota.html", context)

@@ -51,4 +51,7 @@ urlpatterns = [
 
     # Dashboard Flota
     path('dashboard/', views.dashboard_flota, name='dashboard_flota'),
+
+    # API simple: kilometraje actual
+    path('api/kilometraje_actual/', views.api_kilometraje_actual, name='api_kilometraje_actual'),
 ]

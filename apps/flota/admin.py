@@ -1,10 +1,17 @@
 from django.contrib import admin
-from .models import Marca, ModeloVehiculo, Vehiculo, DocumentoVehiculo, KilometrajeVehiculo
+from .models import (
+    Marca, TipoCarroceria, ModeloVehiculo, Vehiculo, DocumentoVehiculo, KilometrajeVehiculo
+)
 
 @admin.register(Marca)
 class MarcaAdmin(admin.ModelAdmin):
     search_fields = ['nombre']
     list_display = ['nombre', 'pais_origen']
+
+@admin.register(TipoCarroceria)
+class TipoCarroceriaAdmin(admin.ModelAdmin):
+    search_fields = ['nombre']
+    list_display = ['nombre']
 
 @admin.register(ModeloVehiculo)
 class ModeloVehiculoAdmin(admin.ModelAdmin):

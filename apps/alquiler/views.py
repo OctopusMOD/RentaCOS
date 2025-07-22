@@ -1,23 +1,149 @@
+# ----------------- IMPORTS ORDENADOS -----------------
+from django.http import JsonResponse, HttpResponse
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q, Count, Sum
 from django.utils import timezone
-from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, TemplateView
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
-from decimal import Decimal  # <--- IMPORTANTE para cálculos con Decimal
-from .models import Cliente, Reserva, Contrato, Factura, Nota  # Vehiculo removido temporalmente
-from .forms import ClienteForm, ReservaForm, ContratoForm, FacturaForm, NotaForm
-from .filters import ReservaFilter, ContratoFilter, FacturaFilter
 from django.utils.decorators import method_decorator
 from django_filters.views import FilterView
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from decimal import Decimal
 
-# DASHBOARD
+from apps.flota.models import Vehiculo
+from .models import Cliente, Reserva, Contrato, Factura, Nota, Entrega, ContratoPeriodo, Extra
+from .forms import ClienteForm, ReservaForm, ContratoForm, FacturaForm, NotaForm, EntregaForm, ContratoAddExtraForm
+from .filters import ReservaFilter, ContratoFilter, FacturaFilter
+
+# ----------------- EXTENSIÓN DE CONTRATO (PERÍODO INLINE) -----------------
+@login_required
+def contrato_extender_inline(request, pk):
+    contrato = get_object_or_404(Contrato, pk=pk)
+    if request.method == "POST":
+        vehiculo_id = request.POST.get("vehiculo")
+        fecha_inicio = request.POST.get("fecha_inicio")
+        fecha_fin = request.POST.get("fecha_fin")
+        if vehiculo_id and fecha_inicio and fecha_fin:
+            vehiculo = get_object_or_404(Vehiculo, pk=vehiculo_id)
+            from django.utils.dateparse import parse_datetime
+            fecha_inicio_dt = parse_datetime(fecha_inicio)
+            fecha_fin_dt = parse_datetime(fecha_fin)
+            if not fecha_inicio_dt or not fecha_fin_dt:
+                messages.error(request, "Formato de fecha inválido.")
+            elif fecha_fin_dt <= fecha_inicio_dt:
+                messages.error(request, "La fecha de fin debe ser posterior a la fecha de inicio.")
+            else:
+                # NUEVA VALIDACIÓN: Verificar que el vehículo no esté en otro contrato activo en ese período
+                otros_periodos = ContratoPeriodo.objects.filter(
+                    vehiculo=vehiculo,
+                    fecha_inicio__lt=fecha_fin_dt,
+                    fecha_fin__gt=fecha_inicio_dt
+                ).exclude(contrato=contrato)
+                if otros_periodos.exists():
+                    messages.error(request, "El vehículo ya está asignado a otro contrato activo en esas fechas.")
+                    return redirect("alquiler:contrato_detail", pk=contrato.pk)
+                solapado = ContratoPeriodo.objects.filter(
+                    contrato=contrato,
+                    vehiculo=vehiculo,
+                    fecha_inicio__lt=fecha_fin_dt,
+                    fecha_fin__gt=fecha_inicio_dt
+                ).exists()
+                if solapado:
+                    messages.error(request, "Ya existe un período para este vehículo que se solapa con las fechas indicadas.")
+                else:
+                    ContratoPeriodo.objects.create(
+                        contrato=contrato,
+                        vehiculo=vehiculo,
+                        fecha_inicio=fecha_inicio_dt,
+                        fecha_fin=fecha_fin_dt
+                    )
+                    messages.success(request, "Período agregado correctamente.")
+        else:
+            messages.error(request, "Todos los campos son obligatorios.")
+    return redirect("alquiler:contrato_detail", pk=contrato.pk)
+
+# ----------------- AGREGAR EXTRA A CONTRATO DESDE DETALLE -----------------
+@login_required
+def contrato_add_extra(request, pk):
+    contrato = get_object_or_404(Contrato, pk=pk)
+    if request.method == "POST":
+        form = ContratoAddExtraForm(request.POST)
+        if form.is_valid():
+            extra = form.cleaned_data["extra"]
+            contrato.extras.add(extra)
+            messages.success(request, "Extra agregado correctamente.")
+        else:
+            messages.error(request, "Ocurrió un error al agregar el extra.")
+    return redirect("alquiler:contrato_detail", pk=contrato.pk)
+
+# ----------------- TERMINAR CONTRATO -----------------
+@login_required
+def contrato_terminar(request, pk):
+    contrato = get_object_or_404(Contrato, pk=pk)
+    if contrato.estado == "ACTIVO":
+        contrato.estado = "TERMINADO"
+        contrato.fecha_termino = timezone.now()
+        contrato.save()
+        messages.success(request, "Contrato terminado correctamente.")
+    else:
+        messages.error(request, "Solo puedes terminar contratos activos.")
+    return redirect('alquiler:contrato_detail', pk=pk)
+
+# ----------------- CANCELAR CONTRATO -----------------
+@login_required
+def contrato_cancelar(request, pk):
+    contrato = get_object_or_404(Contrato, pk=pk)
+    if contrato.estado not in ['BORRADOR', 'POR_FIRMAR', 'ACTIVO']:
+        messages.error(request, "Solo puedes cancelar contratos en estado BORRADOR, POR_FIRMAR o ACTIVO.")
+        return redirect('alquiler:contrato_detail', pk=pk)
+    if request.method == "POST":
+        contrato.estado = "CANCELADO"
+        contrato.fecha_cancelacion = timezone.now()
+        contrato.save()
+        messages.success(request, "Contrato cancelado correctamente.")
+        return redirect('alquiler:contrato_detail', pk=pk)
+    return render(request, 'alquiler/contrato_cancelar_confirm.html', {'contrato': contrato})
+
+# ----------------- API para obtener datos de contacto de un cliente -----------------
+@login_required
+def api_cliente_datos_contacto(request, cliente_id):
+    try:
+        cliente = Cliente.objects.get(pk=cliente_id)
+        if cliente.tipo_cliente == "EMPRESA":
+            contacto = (cliente.nombre_contacto or "") + (" " + (cliente.apellidos_contacto or "") if cliente.apellidos_contacto else "")
+            telefono = cliente.telefono_empresa or ""
+        else:
+            contacto = (cliente.nombre_contacto or "") + (" " + (cliente.apellidos_contacto or "") if cliente.apellidos_contacto else "")
+            telefono = cliente.telefono_contacto or ""
+        return JsonResponse({"contacto": contacto.strip(), "telefono": telefono})
+    except Cliente.DoesNotExist:
+        return JsonResponse({"contacto": "", "telefono": ""})
+
+# ----------------- API Detalle de Vehículo -----------------
+@login_required
+def api_vehiculo_detalle(request, vehiculo_id):
+    try:
+        vehiculo = Vehiculo.objects.select_related('modelo__marca').get(pk=vehiculo_id)
+        data = {
+            "patente": getattr(vehiculo, 'patente', ''),
+            "marca": getattr(vehiculo.modelo.marca, 'nombre', '') if vehiculo.modelo and vehiculo.modelo.marca else "",
+            "modelo": getattr(vehiculo.modelo, 'nombre', '') if vehiculo.modelo else "",
+            "anio": getattr(vehiculo, 'anio_fabricacion', ''),
+            "color": getattr(vehiculo, 'color', ''),
+            "transmision": getattr(vehiculo, 'transmision', ''),
+            "combustible": getattr(vehiculo, 'combustible', ''),
+            "kilometraje": getattr(vehiculo, 'kilometraje_actual', ''),
+        }
+    except Vehiculo.DoesNotExist:
+        data = {}
+    return JsonResponse(data)
+
+# ----------------- DASHBOARD -----------------
 @login_required
 def dashboard(request):
     total_clientes = Cliente.objects.filter(activo=True).count()
@@ -45,7 +171,7 @@ def dashboard(request):
     }
     return render(request, 'alquiler/dashboard.html', context)
 
-# CRUD CLIENTES
+# ----------------- CRUD CLIENTES -----------------
 @login_required
 def cliente_list(request):
     queryset = Cliente.objects.all()
@@ -122,7 +248,6 @@ def cliente_detail(request, pk):
     monto_total = reservas.aggregate(
         total=Sum('monto_total')
     )['total'] or 0
-    # CORREGIDO: relación correcta hacia facturas
     facturas_pendientes = Factura.objects.filter(
         contrato__reserva__cliente=cliente,
         estado='PENDIENTE'
@@ -167,7 +292,7 @@ def cliente_toggle_status(request, pk):
         'active': cliente.activo
     })
 
-# CRUD RESERVAS
+# ----------------- CRUD RESERVAS -----------------
 @method_decorator(login_required, name='dispatch')
 class ReservaListView(FilterView):
     model = Reserva
@@ -185,8 +310,7 @@ def reserva_create(request):
         form = ReservaForm(request.POST)
         if form.is_valid():
             reserva = form.save(commit=False)
-            # reserva.monto_total = reserva.vehiculo.tarifa_diaria * max(1, dias)
-            reserva.monto_total = 0  # O el valor que desees, o pide ese valor en el formulario
+            reserva.monto_total = 0
             reserva.save()
             messages.success(request, 'Reserva creada exitosamente.')
             return redirect('alquiler:reserva_detail', pk=reserva.pk)
@@ -228,8 +352,7 @@ def reserva_update(request, pk):
         form = ReservaForm(request.POST, instance=reserva)
         if form.is_valid():
             reserva = form.save(commit=False)
-            # reserva.monto_total = reserva.vehiculo.tarifa_diaria * max(1, dias)
-            reserva.monto_total = 0  # O el valor que desees, o pide ese valor en el formulario
+            reserva.monto_total = 0
             reserva.save()
             messages.success(request, 'Reserva actualizada exitosamente.')
             return redirect('alquiler:reserva_detail', pk=pk)
@@ -291,7 +414,7 @@ def reserva_cancelar(request, pk):
     messages.success(request, 'Reserva cancelada exitosamente.')
     return redirect('alquiler:reserva_detail', pk=pk)
 
-# CRUD CONTRATOS
+# ----------------- CRUD CONTRATOS (Actualizado) -----------------
 @method_decorator(login_required, name='dispatch')
 class ContratoListView(FilterView):
     model = Contrato
@@ -301,98 +424,125 @@ class ContratoListView(FilterView):
     paginate_by = 10
 
     def get_queryset(self):
-        return super().get_queryset().select_related('reserva__cliente').order_by('-fecha_firma')
+        return super().get_queryset().select_related('reserva__cliente').order_by('-fecha_inicio')
 
 @login_required
+@login_required
 def contrato_create(request):
-    reserva_id = request.GET.get('reserva')
+    print("Entrando al POST del contrato_create")
     initial = {}
-    reserva_obj = None
-    if reserva_id:
-        try:
-            reserva_obj = Reserva.objects.select_related('cliente').get(pk=reserva_id)
-            # Validar SOLO aquí: debe estar CONFIRMADA y sin contrato
-            if reserva_obj.estado != 'CONFIRMADA' or hasattr(reserva_obj, 'contrato'):
-                messages.error(request, "Solo puedes generar contrato para reservas confirmadas y sin contrato asociado.")
-                return redirect('alquiler:reserva_detail', pk=reserva_id)
-            initial['reserva'] = reserva_obj
-            initial['cliente'] = reserva_obj.cliente
-        except Reserva.DoesNotExist:
-            messages.error(request, "Reserva no encontrada.")
-            return redirect('alquiler:reserva_list')
-
     if request.method == 'POST':
-        # Usar reserva_obj si vino por GET, sino tomar del form
-        reserva_from_form = reserva_obj or None
-        form = ContratoForm(request.POST, request.FILES, initial=initial)
-        if form.is_valid():
-            contrato = form.save(commit=False)
-            reserva_asoc = reserva_from_form or contrato.reserva
-            # Validar SOLO aquí, antes de guardar (para evitar error de estado cambiado)
-            if reserva_asoc.estado != 'CONFIRMADA' or hasattr(reserva_asoc, 'contrato'):
-                messages.error(request, "Solo puedes generar contrato para reservas confirmadas y sin contrato.")
-                return redirect('alquiler:reserva_detail', pk=reserva_asoc.pk)
-            # Numeración
-            año_actual = timezone.now().year
-            ultimo_contrato = Contrato.objects.filter(
-                numero_contrato__startswith=f'CONT-{año_actual}'
-            ).order_by('-numero_contrato').first()
-            if ultimo_contrato:
-                try:
-                    ultimo_numero = int(ultimo_contrato.numero_contrato.split('-')[-1])
-                except Exception:
-                    ultimo_numero = 0
-                nuevo_numero = ultimo_numero + 1
-            else:
-                nuevo_numero = 1
-            contrato.numero_contrato = f'CONT-{año_actual}-{nuevo_numero:04d}'
-            if reserva_asoc:
-                contrato.reserva = reserva_asoc
-                contrato.cliente = reserva_asoc.cliente
-            contrato.save()
-            # SOLO AHORA actualizar la reserva
-            if contrato.reserva:
-                contrato.reserva.contrato = contrato
-                contrato.reserva.estado = 'COMPLETADA'
-                contrato.reserva.save()
-            messages.success(request, "Contrato creado exitosamente.")
-            return redirect('alquiler:contrato_detail', pk=contrato.pk)
+        form = ContratoForm(request.POST, request.FILES)
+        print("===> form.is_bound:", form.is_bound)
+        print("===> form.data:", form.data)
+        print("===> form.initial:", form.initial)
+        print("===> form.instance:", form.instance)
+        print("===> form.is_bound:", form.is_bound)
+        print("===> form.data:", form.data)
+        print("===> form.initial:", form.initial)
+        print("===> form.instance:", form.instance)
+        entrega_form = EntregaForm(request.POST, prefix='entrega')
+
+        # Debug campos y datos recibidos
+        print("Campos requeridos en ContratoForm:", form.fields.keys())
+        print("Datos POST recibidos en ContratoForm:")
+        for key in form.fields.keys():
+            print(f"{key}: {request.POST.get(key, '[NO DATA]')}")
+
+        # Validar forms e imprimir errores
+        print("ContratoForm is valid:", form.is_valid())
+        if not form.is_valid():
+            import pprint
+            print(">>> form.errors:", form.errors)
+            print(">>> form.non_field_errors():", form.non_field_errors())
+            print(">>> form.cleaned_data:", getattr(form, 'cleaned_data', None))
+            # Esto es clave para ver si el form tiene errores no asociados a campos
+            if hasattr(form, '_errors') and form._errors:
+                pprint.pprint(form._errors)
+        print("ContratoForm errors:")
+        print(form.errors)
+        print("ContratoForm non_field_errors:")
+        print(form.non_field_errors())
+
+        # Debug extra solicitado
+        print(">>> form.is_valid():", form.is_valid())
+        print(">>> form.errors:", form.errors)
+        print(">>> form.non_field_errors():", form.non_field_errors())
+        print(">>> form.cleaned_data:", getattr(form, 'cleaned_data', None))
+        if hasattr(form, 'instance'):
+            print(">>> form.instance:", form.instance)
+
+        print("EntregaForm is valid:", entrega_form.is_valid())
+        print("EntregaForm errors:")
+        print(entrega_form.errors)
+
+        # Guardar solo si ambos válidos
+        if form.is_valid() and entrega_form.is_valid():
+            try:
+                print("[DEBUG] Intentando guardar contrato")
+                contrato = form.save(commit=False)
+                print("[DEBUG] Contrato instanciado, llamando full_clean()")
+                contrato.full_clean()
+                contrato.estado = 'POR_FIRMAR'
+                contrato.save()
+                form.save_m2m()
+                entrega = entrega_form.save(commit=False)
+                entrega.contrato = contrato
+                entrega.save()
+                print("Contrato guardado:", contrato.pk, contrato.numero_contrato)
+                messages.success(request, "Contrato creado exitosamente.")
+                return redirect('alquiler:contrato_detail', pk=contrato.pk)
+            except Exception as e:
+                print("ERROR AL GUARDAR CONTRATO:", repr(e))
+                messages.error(request, f"Error al guardar el contrato: {e}")
+        else:
+            print("Forms NO válidos o hay algún error")
+            print("ContratoForm errors:")
+            print(form.errors)
+            print("EntregaForm errors:")
+            print(entrega_form.errors)
     else:
         form = ContratoForm(initial=initial)
-        if reserva_obj:
-            form.fields['reserva'].widget.attrs['readonly'] = True
-            form.fields['cliente'].widget.attrs['readonly'] = True
-
+        entrega_form = EntregaForm(prefix='entrega')
     return render(request, 'alquiler/contrato_form.html', {
         'form': form,
+        'entrega_form': entrega_form,
         'title': 'Nuevo Contrato',
-        'reserva_preseleccionada': reserva_obj is not None,
-        'reserva_obj': reserva_obj
     })
 
 @login_required
 def contrato_detail(request, pk):
-    contrato = get_object_or_404(
-        Contrato.objects.select_related('reserva__cliente'),
-        pk=pk
-    )
+    contrato = get_object_or_404(Contrato.objects.select_related('reserva__cliente'), pk=pk)
+    entrega_form = None
+    add_extra_form = ContratoAddExtraForm()
+    if hasattr(contrato, 'entrega') and contrato.puede_editar_direccion_devolucion:
+        entrega_form = EntregaForm(instance=contrato.entrega, prefix='entrega')
     context = {
         'contrato': contrato,
+        'entrega_form': entrega_form,
+        'add_extra_form': add_extra_form,
     }
     return render(request, 'alquiler/contrato_detail.html', context)
 
 @login_required
 def contrato_update(request, pk):
     contrato = get_object_or_404(Contrato, pk=pk)
+    entrega_instance = getattr(contrato, 'entrega', None)
     if request.method == 'POST':
         form = ContratoForm(request.POST, request.FILES, instance=contrato)
-        if form.is_valid():
+        entrega_form = EntregaForm(request.POST, instance=entrega_instance, prefix='entrega')
+        if form.is_valid() and (not entrega_instance or entrega_form.is_valid()):
             contrato = form.save(commit=False)
             reserva_asociada = contrato.reserva
             if reserva_asociada and reserva_asociada.estado != 'CONFIRMADA':
                 messages.error(request, "Solo puedes asociar contratos a reservas en estado CONFIRMADA.")
                 return redirect('alquiler:contrato_update', pk=pk)
             contrato.save()
+            form.save_m2m()
+            if entrega_form and entrega_form.is_valid():
+                entrega = entrega_form.save(commit=False)
+                entrega.contrato = contrato
+                entrega.save()
             if reserva_asociada:
                 reserva_asociada.contrato = contrato
                 reserva_asociada.estado = 'COMPLETADA'
@@ -401,17 +551,44 @@ def contrato_update(request, pk):
             return redirect('alquiler:contrato_detail', pk=pk)
     else:
         form = ContratoForm(instance=contrato)
+        entrega_form = EntregaForm(instance=entrega_instance, prefix='entrega')
     return render(request, 'alquiler/contrato_form.html', {
         'form': form,
+        'entrega_form': entrega_form,
         'contrato': contrato,
         'title': 'Editar Contrato'
     })
 
 @login_required
+def contrato_firmar(request, pk):
+    contrato = get_object_or_404(Contrato, pk=pk)
+    if contrato.estado != 'POR_FIRMAR':
+        messages.warning(request, "Solo puedes firmar contratos en estado 'Por firmar'.")
+        return redirect('alquiler:contrato_detail', pk=pk)
+
+    # --- NUEVA VALIDACIÓN CRÍTICA ---
+    if contrato.vehiculo:
+        existe_otro = Contrato.objects.filter(
+            vehiculo=contrato.vehiculo,
+            estado='ACTIVO'
+        ).exclude(pk=contrato.pk).exists()
+        if existe_otro:
+            messages.error(request, "Este vehículo ya está en otro contrato activo. No puedes firmar este contrato.")
+            return redirect('alquiler:contrato_detail', pk=pk)
+    # --- FIN NUEVA VALIDACIÓN ---
+
+    if request.method == "POST":
+        contrato.estado = 'ACTIVO'
+        contrato.fecha_firma = timezone.now()
+        contrato.save()
+        messages.success(request, "Contrato firmado, ahora está ACTIVO.")
+        return redirect('alquiler:contrato_detail', pk=pk)
+    return render(request, 'alquiler/contrato_firmar_confirm.html', {'contrato': contrato})
+@login_required
 def contrato_delete(request, pk):
     contrato = get_object_or_404(Contrato, pk=pk)
-    if contrato.estado != 'BORRADOR':
-        messages.error(request, "Sólo puedes eliminar contratos en estado BORRADOR.")
+    if contrato.estado != 'POR_FIRMAR':
+        messages.error(request, "Sólo puedes eliminar contratos en estado 'Por firmar'.")
         return redirect('alquiler:contrato_detail', pk=pk)
     if request.method == 'POST':
         contrato.delete()
@@ -421,7 +598,7 @@ def contrato_delete(request, pk):
         'contrato': contrato
     })
 
-# CRUD FACTURAS
+# ----------------- CRUD FACTURAS -----------------
 @method_decorator(login_required, name='dispatch')
 class FacturaListView(FilterView):
     model = Factura
@@ -441,7 +618,6 @@ def factura_create(request):
     if contrato_id:
         contrato = get_object_or_404(Contrato, pk=contrato_id)
         cliente = contrato.cliente
-        # Ajusta los campos según tu modelo de Contrato y Cliente
         initial = {
             "contrato": contrato,
             "rut_receptor": getattr(cliente, "rut_empresa", "") or getattr(cliente, "numero_documento", ""),
@@ -465,7 +641,7 @@ def factura_create(request):
 @login_required
 def factura_detail(request, pk):
     factura = get_object_or_404(
-        Factura.objects.select_related('contrato'),  # <--- SOLO 'contrato'
+        Factura.objects.select_related('contrato'),
         pk=pk
     )
     dias_vencimiento = None
@@ -519,11 +695,9 @@ def contrato_pdf(request, pk):
     p = canvas.Canvas(response, pagesize=A4)
     width, height = A4
 
-    # Encabezado
     p.setFont("Helvetica-Bold", 16)
     p.drawString(100, height - 80, "CONTRATO DE ARRENDAMIENTO")
 
-    # Datos del contrato y del cliente
     p.setFont("Helvetica", 12)
     y = height - 120
     p.drawString(50, y, f"Contrato N°: {contrato.pk}")
@@ -539,14 +713,12 @@ def contrato_pdf(request, pk):
     p.drawString(50, y, f"Fecha de contrato: {getattr(contrato, 'fecha', '')}")
     y -= 30
 
-    # Términos (ejemplo)
     p.setFont("Helvetica-Bold", 13)
     p.drawString(50, y, "Términos del contrato:")
     y -= 20
     p.setFont("Helvetica", 12)
     p.drawString(60, y, getattr(contrato, 'terminos', "Términos y condiciones generales..."))
 
-    # Pie de página
     p.setFont("Helvetica", 10)
     p.drawString(50, 40, "Firma del cliente: _______________________")
 
@@ -568,7 +740,6 @@ def factura_create_from_contrato(request, contrato_pk):
             factura = form.save(commit=False)
             factura.contrato = contrato
             factura.fecha_emision = timezone.now()
-            # Generación automática del número de factura
             año_actual = timezone.now().year
             ultima_factura = Factura.objects.filter(numero_factura__startswith=f'F{año_actual}').order_by('-numero_factura').first()
             if ultima_factura:
@@ -586,7 +757,6 @@ def factura_create_from_contrato(request, contrato_pk):
             messages.success(request, 'Factura creada exitosamente.')
             return redirect('alquiler:factura_detail', pk=factura.pk)
     else:
-        # Precarga automática
         initial = {
             'contrato': contrato.pk,
             'rut_receptor': cliente.rut_empresa if cliente else '',
@@ -613,7 +783,6 @@ def factura_anular(request, pk):
     if factura.estado != 'ANULADA':
         factura.estado = 'ANULADA'
         factura.save()
-        # Aquí podrías crear la lógica para generar la nota de crédito asociada
         messages.success(request, 'Factura anulada exitosamente. Debe generarse una nota de crédito.')
     else:
         messages.warning(request, 'La factura ya está anulada.')
@@ -639,7 +808,7 @@ def factura_update(request, pk):
         'title': 'Editar Factura'
     })
 
-# CRUD NOTAS
+# ----------------- CRUD NOTAS -----------------
 @login_required
 def nota_create(request, factura_pk):
     factura = get_object_or_404(Factura, pk=factura_pk)
@@ -652,7 +821,6 @@ def nota_create(request, factura_pk):
         if form.is_valid():
             nota = form.save(commit=False)
             nota.factura = factura
-            # Generar número de nota automáticamente
             año_actual = timezone.now().year
             tipo_prefijo = 'NC' if nota.tipo == 'CREDITO' else 'ND'
             ultima_nota = Nota.objects.filter(tipo=nota.tipo, numero__startswith=f'{tipo_prefijo}{año_actual}').order_by('-numero').first()
@@ -682,9 +850,8 @@ def nota_detail(request, pk):
         'nota': nota,
     })
 
-from django.http import JsonResponse
-from .models import Contrato
-
+# ----------------- API de Contrato -----------------
+@login_required
 def api_datos_contrato(request, contrato_id):
     try:
         contrato = Contrato.objects.select_related('cliente').get(pk=contrato_id)
@@ -701,7 +868,8 @@ def api_datos_contrato(request, contrato_id):
         data = {}
     return JsonResponse(data)
 
-# VISTA PARA EL DASHBOARD DE ALQUILER
+# ----------------- Dashboard Class-based View -----------------
+@method_decorator(login_required, name='dispatch')
 class AlquilerDashboardView(TemplateView):
     template_name = "alquiler/dashboard.html"
 
@@ -710,15 +878,13 @@ class AlquilerDashboardView(TemplateView):
         hoy = timezone.now().date()
         mes_actual = hoy.month
         anio_actual = hoy.year
-
-        # KPIs
         context["total_reservas_hoy"] = Reserva.objects.filter(fecha_reserva__date=hoy).count()
         context["total_reservas_mes"] = Reserva.objects.filter(
             fecha_reserva__year=anio_actual, fecha_reserva__month=mes_actual
         ).count()
         context["total_reservas"] = Reserva.objects.count()
         context["reservas_por_estado"] = Reserva.objects.values("estado").annotate(cantidad=Count("id"))
-        context["contratos_activos"] = Contrato.objects.filter(estado__in=["ACTIVO", "FIRMADO"]).count()
+        context["contratos_activos"] = Contrato.objects.filter(estado="ACTIVO").count()
         context["facturas_emitidas"] = Factura.objects.count()
         context["facturas_pendientes"] = Factura.objects.exclude(estado="PAGADA").count()
         context["proximas_reservas"] = Reserva.objects.filter(

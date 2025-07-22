@@ -3,7 +3,15 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.db.models import Count
 from django.utils import timezone
-from .models import Cliente, Reserva, Contrato, Factura, Nota
+from .models import Cliente, Reserva, Contrato, Factura, Nota, Extra
+
+@admin.register(Extra)
+class ExtraAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'precio', 'activo')
+    list_filter = ('activo',)
+    search_fields = ('nombre', 'descripcion')
+    ordering = ('nombre',)
+    fields = ('nombre', 'descripcion', 'precio', 'activo')
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
@@ -138,13 +146,14 @@ class ReservaAdmin(admin.ModelAdmin):
 @admin.register(Contrato)
 class ContratoAdmin(admin.ModelAdmin):
     list_display = ('numero_contrato', 'reserva', 'cliente', 'fecha_firma',
-                   'estado', 'tiene_pdf')
-    list_filter = ('estado', 'fecha_firma')
+                   'estado', 'tiene_pdf', 'listar_extras')
+    list_filter = ('estado', 'fecha_firma', 'extras')
     search_fields = ('numero_contrato', 'reserva__cliente__razon_social',
                     'reserva__cliente__nombre_contacto')
     date_hierarchy = 'fecha_firma'
     readonly_fields = ('numero_contrato',)
     raw_id_fields = ('reserva',)
+    filter_horizontal = ('extras',)
 
     fieldsets = (
         ('Información del Contrato', {
@@ -152,7 +161,8 @@ class ContratoAdmin(admin.ModelAdmin):
                 'numero_contrato',
                 'reserva',
                 'estado',
-                'fecha_firma'
+                'fecha_firma',
+                'extras',
             )
         }),
         ('Documentación', {
@@ -179,7 +189,13 @@ class ContratoAdmin(admin.ModelAdmin):
             )
         return format_html('<span class="text-danger">Sin PDF</span>')
     tiene_pdf.short_description = "PDF"
-    tiene_pdf.boolean = True
+
+    def listar_extras(self, obj):
+        extras = obj.extras.all()
+        if extras:
+            return ", ".join([str(e) for e in extras])
+        return "-"
+    listar_extras.short_description = "Extras"
 
 @admin.register(Factura)
 class FacturaAdmin(admin.ModelAdmin):

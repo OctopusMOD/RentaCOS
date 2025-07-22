@@ -1,10 +1,127 @@
 from django.db import models
+from apps.flota.models import Vehiculo
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 import re
 
+# ---- ContratoPeriodo ----
+class ContratoPeriodo(models.Model):
+    """Periodo de arriendo de un vehículo dentro de un contrato (para extensiones, reemplazos, etc)."""
+    contrato = models.ForeignKey("Contrato", related_name="periodos", on_delete=models.CASCADE)
+    vehiculo = models.ForeignKey("flota.Vehiculo", on_delete=models.PROTECT)
+    fecha_inicio = models.DateTimeField()
+    fecha_fin = models.DateTimeField()
+
+    class Meta:
+        ordering = ["fecha_inicio"]
+        verbose_name = "Período de Contrato"
+        verbose_name_plural = "Períodos de Contrato"
+
+
+    def clean(self):
+        # Validar fechas
+        if self.fecha_fin <= self.fecha_inicio:
+            raise ValidationError("La fecha de fin debe ser posterior a la de inicio.")
+
+        # Validar solape de períodos para el mismo vehículo
+        solapados = ContratoPeriodo.objects.filter(
+            vehiculo=self.vehiculo,
+            fecha_inicio__lt=self.fecha_fin,
+            fecha_fin__gt=self.fecha_inicio
+        ).exclude(pk=self.pk)
+        if solapados.exists():
+            raise ValidationError("Ya existe un período para este vehículo que se solapa con las fechas indicadas.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.vehiculo} ({self.fecha_inicio:%d/%m/%Y} - {self.fecha_fin:%d/%m/%Y}) en {self.contrato}"
+
+# ---- Extras ----
+class Extra(models.Model):
+    """Ítems adicionales para contratos: GPS, silla, seguro, etc."""
+    nombre = models.CharField(max_length=64, unique=True)
+    descripcion = models.TextField(blank=True, null=True)
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Extra"
+        verbose_name_plural = "Extras"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return f"{self.nombre} (${self.precio})"
+
+# ---- ContratoVehiculo ----
+class ContratoVehiculo(models.Model):
+    """Historial de vehículos asociados a un contrato (por reemplazos, períodos, etc)."""
+    MODO_CHOICES = [
+        ('PRINCIPAL', 'Principal'),
+        ('REEMPLAZO', 'Reemplazo'),
+    ]
+    contrato = models.ForeignKey('Contrato', on_delete=models.CASCADE, related_name='vehiculos_historial')
+    vehiculo = models.ForeignKey('flota.Vehiculo', on_delete=models.PROTECT, related_name='contratos_historial')
+    es_principal = models.BooleanField(default=False)
+    modo = models.CharField(max_length=16, choices=MODO_CHOICES, default='PRINCIPAL')
+    fecha_desde = models.DateTimeField(default=timezone.now)
+    fecha_hasta = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Historial de Vehículo en Contrato"
+        verbose_name_plural = "Historial de Vehículos en Contrato"
+        ordering = ['contrato', '-fecha_desde']
+
+    def __str__(self):
+        return f"{self.vehiculo} ({self.get_modo_display()}) para {self.contrato}"
+
+# ---- Entrega ----
+class Entrega(models.Model):
+    """Datos de entrega y devolución de vehículos: sucursal o delivery."""
+    contrato = models.OneToOneField('Contrato', on_delete=models.CASCADE, related_name='entrega')
+    is_delivery = models.BooleanField("¿Entrega a domicilio?", default=False)
+    direccion_entrega = models.CharField(max_length=255, blank=True, null=True)
+    direccion_devolucion = models.CharField(max_length=255, blank=True, null=True)
+    chofer = models.CharField(max_length=100, blank=True, null=True)
+    delivery_cost = models.DecimalField("Costo de delivery", max_digits=10, decimal_places=2, default=0, blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Entrega"
+        verbose_name_plural = "Entregas"
+
+    def __str__(self):
+        return f"Entrega para {self.contrato} ({'Delivery' if self.is_delivery else 'Sucursal'})"
+
+# ---- Checklist ----
+class Checklist(models.Model):
+    """Checklist de revisión para entrega, devolución o reemplazo de vehículo."""
+    TIPO_EVENTO_CHOICES = [
+        ('ENTREGA', 'Entrega'),
+        ('REEMPLAZO', 'Reemplazo'),
+        ('DEVOLUCION', 'Devolución'),
+    ]
+    contrato = models.ForeignKey('Contrato', on_delete=models.CASCADE, related_name='checklists')
+    vehiculo = models.ForeignKey('flota.Vehiculo', on_delete=models.PROTECT, related_name='checklists')
+    tipo_evento = models.CharField(max_length=16, choices=TIPO_EVENTO_CHOICES)
+    fecha = models.DateTimeField(default=timezone.now)
+    kilometraje = models.PositiveIntegerField()
+    observaciones = models.TextField(blank=True, null=True)
+    fotos = models.ImageField(upload_to='checklists/fotos/', blank=True, null=True)
+    # Si quieres varias fotos, puedes crear un modelo aparte y usar ManyToMany.
+
+    class Meta:
+        verbose_name = "Checklist"
+        verbose_name_plural = "Checklists"
+        ordering = ['-fecha']
+
+    def __str__(self):
+        return f"{self.get_tipo_evento_display()} - {self.vehiculo} ({self.fecha.date()})"
+
+# ---- Constantes de factura/nota ----
 TIPOS_DOC = [
     ('33', 'Factura Electrónica'),
     ('34', 'Factura Exenta Electrónica'),
@@ -19,6 +136,7 @@ ESTADOS_FACTURA = [
     ('ANULADA', 'Anulada'),
 ]
 
+# ---- Cliente ----
 class Cliente(models.Model):
     """Modelo para almacenar la información de los clientes empresariales en Chile."""
 
@@ -227,6 +345,7 @@ class Cliente(models.Model):
             self.ciudad = self.ciudad.title()
         super().save(*args, **kwargs)
 
+# ---- Reserva ----
 class Reserva(models.Model):
     """Modelo para gestionar las reservas de vehículos."""
 
@@ -243,23 +362,17 @@ class Reserva(models.Model):
         related_name='reservas',
         verbose_name="Cliente"
     )
-    # vehiculo = models.ForeignKey(
-    #     'flota.Vehiculo',
-    #     on_delete=models.PROTECT,
-    #     related_name='reservas',
-    #     verbose_name="Vehículo"
-    # )
-    # Vehiculo removido temporalmente
-    fecha_inicio = models.DateTimeField(
-        verbose_name="Fecha de Inicio"
+    vehiculo = models.ForeignKey(
+        'flota.Vehiculo',
+        on_delete=models.PROTECT,
+        related_name='reservas',
+        verbose_name="Vehículo",
+        null=True,
+        blank=True
     )
-    fecha_fin = models.DateTimeField(
-        verbose_name="Fecha de Fin"
-    )
-    fecha_reserva = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Fecha de Reserva"
-    )
+    fecha_inicio = models.DateTimeField(verbose_name="Fecha de Inicio")
+    fecha_fin = models.DateTimeField(verbose_name="Fecha de Fin")
+    fecha_reserva = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Reserva")
     estado = models.CharField(
         max_length=20,
         choices=ESTADO_CHOICES,
@@ -271,10 +384,7 @@ class Reserva(models.Model):
         decimal_places=2,
         verbose_name="Monto Total"
     )
-    observaciones = models.TextField(
-        blank=True,
-        verbose_name="Observaciones"
-    )
+    observaciones = models.TextField(blank=True, verbose_name="Observaciones")
 
     # Métodos de permisos
     def puede_editar(self):
@@ -325,18 +435,32 @@ class Reserva(models.Model):
         self.clean()
         super().save(*args, **kwargs)
 
+# ---- Contrato ----
 class Contrato(models.Model):
-    """Modelo para gestionar los contratos de alquiler."""
+    def get_vehiculos_disponibles(self, fecha_inicio=None, fecha_fin=None):
+        """
+        Devuelve queryset de vehículos disponibles para este contrato.
+        Si se proveen fechas, excluye vehículos ocupados en periodos solapados.
+        Incluye vehículos DISPONIBLE y LIBRE (con advertencia si tiene subestado).
+        """
+        from apps.flota.models import Vehiculo
+        qs = Vehiculo.objects.filter(estado_general__in=['DISPONIBLE', 'LIBRE'])
+        if fecha_inicio and fecha_fin:
+            ocupados = ContratoPeriodo.objects.filter(
+                fecha_inicio__lt=fecha_fin,
+                fecha_fin__gt=fecha_inicio
+            ).values_list('vehiculo_id', flat=True)
+            qs = qs.exclude(id__in=ocupados)
+        return qs
 
+    # --- campos y choices según tu versión actual ---
     ESTADO_CHOICES = [
-        ('BORRADOR', 'Borrador'),
-        ('FIRMADO', 'Firmado'),
+        ('POR_FIRMAR', 'Por firmar'),
         ('ACTIVO', 'Activo'),
         ('FINALIZADO', 'Finalizado'),
         ('CANCELADO', 'Cancelado'),
     ]
 
-    # Cambiado: reserva es opcional, on_delete SET_NULL
     reserva = models.OneToOneField(
         'Reserva',
         on_delete=models.SET_NULL,
@@ -345,42 +469,93 @@ class Contrato(models.Model):
         related_name='contrato',
         verbose_name="Reserva"
     )
-    numero_contrato = models.CharField(
-        max_length=20,
-        unique=True,
-        verbose_name="Número de Contrato"
-    )
-    fecha_firma = models.DateTimeField(
+    cliente = models.ForeignKey(
+        'Cliente',
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
-        verbose_name="Fecha de Firma"
+        related_name='contratos',
+        verbose_name="Cliente directo"
     )
+    vehiculo = models.ForeignKey(
+        'flota.Vehiculo',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='contratos'
+    )
+    numero_contrato = models.CharField(max_length=20, unique=True, blank=True)
+    fecha_inicio = models.DateTimeField(verbose_name="Fecha inicio arriendo", null=True, blank=True)
+    fecha_fin = models.DateTimeField(verbose_name="Fecha fin arriendo", null=True, blank=True)
+    fecha_firma = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de firma")
     estado = models.CharField(
         max_length=20,
-        choices=ESTADO_CHOICES,
-        default='BORRADOR',
-        verbose_name="Estado"
+        default='POR_FIRMAR',
+        choices=ESTADO_CHOICES
     )
-    terminos_condiciones = models.TextField(
-        verbose_name="Términos y Condiciones"
-    )
-    documento_pdf = models.FileField(
-        upload_to='contratos/',
+    terminos_condiciones = models.TextField(blank=True)
+    documento_pdf = models.FileField(upload_to='contratos/', null=True, blank=True)
+    extras = models.ManyToManyField('Extra', blank=True, related_name='contratos')
+
+    tarifa_diaria = models.DecimalField(
+        "Tarifa diaria",
+        max_digits=10,
+        decimal_places=2,
         null=True,
         blank=True,
-        verbose_name="Documento PDF"
+        help_text="Tarifa diaria base del arriendo (puede venir del grupo o del vehículo, editable por el usuario)."
+    )
+    descuento_porcentaje = models.DecimalField(
+        "Descuento (%)",
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        help_text="Porcentaje de descuento aplicado al subtotal (0-100%)."
+    )
+    garantia = models.DecimalField(
+        "Garantía",
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Monto de garantía exigida en el contrato."
+    )
+    monto_total = models.DecimalField(
+        "Monto total del contrato",
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Total final a pagar por el contrato, calculado automáticamente."
     )
 
-    class Meta:
-        verbose_name = "Contrato"
-        verbose_name_plural = "Contratos"
-        ordering = ['-fecha_firma']
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Si hay vehículo asignado y el contrato está activo o por firmar, marcar el vehículo como EN_ARRIENDO
+        if self.vehiculo and self.estado in ['ACTIVO', 'POR_FIRMAR']:
+            if self.vehiculo.estado_general != 'EN_ARRIENDO':
+                self.vehiculo.estado_general = 'EN_ARRIENDO'
+                self.vehiculo.save(update_fields=['estado_general'])
 
     def __str__(self):
-        if self.reserva:
-            return f"Contrato {self.numero_contrato} - {self.reserva.cliente}"
-        return f"Contrato {self.numero_contrato} - Sin Reserva"
+        return self.numero_contrato or f"Contrato #{self.id}"
 
+    @property
+    def cliente_visible(self):
+        if self.reserva and self.reserva.cliente:
+            return self.reserva.cliente
+        return self.cliente
+
+    @property
+    def vehiculo_visible(self):
+        if self.reserva and self.reserva.vehiculo:
+            return self.reserva.vehiculo
+        return self.vehiculo
+
+    @property
+    def puede_editar_direccion_devolucion(self):
+        return self.estado == 'ACTIVO'
+
+# ---- Factura ----
 class Factura(models.Model):
     contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, related_name='facturas')
     tipo_documento = models.CharField(max_length=4, choices=TIPOS_DOC, default='33')
@@ -405,6 +580,7 @@ class Factura(models.Model):
     class Meta:
         ordering = ['-fecha_emision']
 
+# ---- Nota ----
 class Nota(models.Model):
     TIPO_NOTA_CHOICES = [
         ('CREDITO', 'Nota de Crédito'),

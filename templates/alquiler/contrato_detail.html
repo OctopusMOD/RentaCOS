@@ -9,16 +9,44 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h3 class="mb-0">Contrato {{ contrato.numero_contrato }}</h3>
                 <div>
-                    <a href="{% url 'alquiler:contrato_update' contrato.pk %}" class="btn btn-warning btn-sm">
-                        <i class="fa fa-edit"></i> Editar
-                    </a>
+                    {% if contrato.estado == "BORRADOR" %}
+                        <a href="{% url 'alquiler:contrato_add_extra' contrato.pk %}" class="btn btn-secondary btn-sm">
+                            <i class="fa fa-plus"></i> Agregar extra
+                        </a>
+                        <a href="{% url 'alquiler:contrato_firmar' contrato.pk %}" class="btn btn-success btn-sm">
+                            <i class="fa fa-pen"></i> Firmar contrato
+                        </a>
+                        <a href="{% url 'alquiler:contrato_update' contrato.pk %}" class="btn btn-warning btn-sm">
+                            <i class="fa fa-edit"></i> Editar
+                        </a>
+                        <a href="{% url 'alquiler:contrato_terminar' contrato.pk %}" class="btn btn-primary btn-sm">
+                            <i class="fa fa-flag-checkered"></i> Terminar
+                        </a>
+                        <a href="{% url 'alquiler:contrato_cancelar' contrato.pk %}" class="btn btn-danger btn-sm">
+                            <i class="fa fa-times"></i> Cancelar
+                        </a>
+                    {% elif contrato.estado == "POR_FIRMAR" %}
+                        <a href="{% url 'alquiler:contrato_firmar' contrato.pk %}" class="btn btn-success btn-sm">
+                            <i class="fa fa-pen"></i> Firmar y Activar
+                        </a>
+                        <a href="{% url 'alquiler:contrato_update' contrato.pk %}" class="btn btn-warning btn-sm">
+                            <i class="fa fa-edit"></i> Editar
+                        </a>
+                        <a href="{% url 'alquiler:contrato_delete' contrato.pk %}" class="btn btn-danger btn-sm">
+                            <i class="fa fa-trash"></i> Eliminar
+                        </a>
+                    {% elif contrato.estado == "ACTIVO" %}
+                        <a href="{% url 'alquiler:contrato_update' contrato.pk %}" class="btn btn-warning btn-sm">
+                            <i class="fa fa-edit"></i> Editar
+                        </a>
+                    {% endif %}
                     <a href="{% url 'alquiler:contrato_list' %}" class="btn btn-secondary btn-sm">
                         <i class="fa fa-arrow-left"></i> Volver
                     </a>
                     <a href="{% url 'alquiler:contrato_pdf' contrato.pk %}" class="btn btn-primary btn-sm" target="_blank">
                         <i class="fa fa-file-pdf"></i> Descargar PDF
                     </a>
-                    <a href="{% url 'alquiler:factura_create_from_contrato' contrato.pk %}" class="btn btn-success">
+                    <a href="{% url 'alquiler:factura_create_from_contrato' contrato.pk %}" class="btn btn-success btn-sm">
                         <i class="fa fa-file-invoice"></i> Emitir Factura
                     </a>
                 </div>
@@ -33,7 +61,17 @@
                 </tr>
                 <tr>
                     <th>Estado:</th>
-                    <td>{{ contrato.get_estado_display }}</td>
+                    <td>
+                        <span class="badge 
+                            {% if contrato.estado == 'BORRADOR' %}bg-info
+                            {% elif contrato.estado == 'POR_FIRMAR' %}bg-warning
+                            {% elif contrato.estado == 'ACTIVO' %}bg-success
+                            {% elif contrato.estado == 'FINALIZADO' %}bg-secondary
+                            {% elif contrato.estado == 'CANCELADO' %}bg-danger
+                            {% else %}bg-light text-dark{% endif %}">
+                            {{ contrato.get_estado_display }}
+                        </span>
+                    </td>
                 </tr>
                 <tr>
                     <th>Fecha de Firma:</th>
@@ -52,6 +90,12 @@
                     </td>
                 </tr>
                 <tr>
+                    <th>Fechas de arriendo:</th>
+                    <td>
+                        {{ contrato.fecha_inicio|date:"d/m/Y H:i" }} - {{ contrato.fecha_fin|date:"d/m/Y H:i" }}
+                    </td>
+                </tr>
+                <tr>
                     <th>Términos y Condiciones:</th>
                     <td>{{ contrato.terminos_condiciones|linebreaks }}</td>
                 </tr>
@@ -65,9 +109,146 @@
                         {% endif %}
                     </td>
                 </tr>
+                <tr>
+                    <th>Extras contratados:</th>
+                    <td>
+                        {% if contrato.extras.all %}
+                            <ul class="mb-0 ps-3">
+                                {% for extra in contrato.extras.all %}
+                                    <li>{{ extra.nombre }} <span class="text-muted">(${% firstof extra.precio "0" %})</span></li>
+                                {% empty %}
+                                    <span class="text-muted">Sin extras</span>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <span class="text-muted">Sin extras</span>
+                        {% endif %}
+
+                        {# Formulario inline para agregar extra #}
+                        {% if contrato.estado == "BORRADOR" or contrato.estado == "ACTIVO" %}
+                        <form method="post" action="{% url 'alquiler:contrato_add_extra' contrato.pk %}" class="mt-2 d-flex align-items-end gap-2">
+                            {% csrf_token %}
+                            <div>
+                                {{ add_extra_form.extra.label_tag }}
+                                {{ add_extra_form.extra }}
+                            </div>
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="fa fa-plus"></i> Agregar extra
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
             </table>
 
+            <!-- Calculadora visible solo si está en estado BORRADOR, POR_FIRMAR o ACTIVO -->
+            {% if contrato.estado in "BORRADOR POR_FIRMAR ACTIVO" %}
             <hr>
+            <h5 class="mt-3"><i class="fa fa-calculator text-primary"></i> Calculadora de costos</h5>
+            <div class="row">
+                <div class="col-lg-6 col-md-8">
+                    <ul class="list-group mb-3">
+                        <li class="list-group-item d-flex justify-content-between"><span>Garantía:</span> <span>${{ contrato.garantia|default:"0" }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between"><span>Días de arriendo:</span> <span>{{ contrato.dias_arriendo }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between"><span>Subtotal base:</span> <span>${{ contrato.subtotal_base }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between"><span>Extras:</span> <span>${{ contrato.total_extras }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between"><span>Delivery:</span> <span>${{ contrato.delivery_cost }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between"><span>Subtotal antes de descuento:</span> <span>${{ contrato.subtotal_final }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between"><span>Descuento aplicado:</span> <span>-${{ contrato.descuento_aplicado }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between"><span>IVA (19%):</span> <span>${{ contrato.iva }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between fw-bold"><span>Total a pagar:</span> <span>${{ contrato.total_final }}</span></li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Historial de periodos y extensión inline -->
+            <hr>
+            <h5 class="mt-3">Historial de vehículos y períodos</h5>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Patente</th>
+                        <th>Fecha inicio</th>
+                        <th>Fecha fin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for periodo in contrato.periodos.all %}
+                    <tr>
+                        <td>{{ periodo.vehiculo.patente }}</td>
+                        <td>{{ periodo.fecha_inicio|date:"d/m/Y H:i" }}</td>
+                        <td>{{ periodo.fecha_fin|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-muted">Sin períodos registrados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if contrato.estado == "BORRADOR" or contrato.estado == "ACTIVO" %}
+            <div class="border rounded p-3 bg-light mb-4">
+                <h6 class="fw-bold mb-2"><i class="fa fa-clock me-1"></i> Extender periodo de arriendo</h6>
+                <form method="post" action="{% url 'alquiler:contrato_extender_inline' contrato.pk %}" class="row g-2 align-items-end">
+                    {% csrf_token %}
+                    <div class="col-md-5">
+                        <label for="vehiculo" class="form-label mb-1">Vehículo</label>
+                        <select name="vehiculo" id="vehiculo" class="form-select form-select-sm">
+                            {% for v in contrato.get_vehiculos_disponibles %}
+                                <option value="{{ v.pk }}">{{ v.patente }} ({{ v.modelo }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="fecha_inicio" class="form-label mb-1">Fecha inicio</label>
+                        <input type="datetime-local" id="fecha_inicio" name="fecha_inicio" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="fecha_fin" class="form-label mb-1">Fecha fin</label>
+                        <input type="datetime-local" id="fecha_fin" name="fecha_fin" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-1">
+                        <button type="submit" class="btn btn-success btn-sm"><i class="fa fa-plus"></i> Extender</button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- Sección de entrega y devolución -->
+            <hr>
+            <h5 class="mt-3">Datos de Entrega y Devolución</h5>
+            {% if contrato.entrega %}
+                <dl class="row">
+                    <dt class="col-md-4">¿Entrega a domicilio?</dt>
+                    <dd class="col-md-8">{{ contrato.entrega.is_delivery|yesno:"Sí,No" }}</dd>
+                    <dt class="col-md-4">Dirección de Entrega</dt>
+                    <dd class="col-md-8">{{ contrato.entrega.direccion_entrega|default:"-" }}</dd>
+                    <dt class="col-md-4">Chofer</dt>
+                    <dd class="col-md-8">{{ contrato.entrega.chofer|default:"-" }}</dd>
+                    <dt class="col-md-4">Costo de Delivery</dt>
+                    <dd class="col-md-8">${{ contrato.entrega.delivery_cost|default:"0" }}</dd>
+                    <dt class="col-md-4">Dirección de Devolución</dt>
+                    <dd class="col-md-8">
+                        {% if contrato.puede_editar_direccion_devolucion %}
+                            <form method="post" class="mb-0" action="{% url 'alquiler:contrato_update' contrato.pk %}">
+                                {% csrf_token %}
+                                <div class="input-group">
+                                    <input type="text" name="entrega-direccion_devolucion" value="{{ contrato.entrega.direccion_devolucion }}" class="form-control" placeholder="Dirección devolución">
+                                    <button class="btn btn-info btn-sm" type="submit">Actualizar</button>
+                                </div>
+                            </form>
+                        {% else %}
+                            {{ contrato.entrega.direccion_devolucion|default:"-" }}
+                            <small class="text-muted d-block">Solo editable cuando el contrato está activo.</small>
+                        {% endif %}
+                    </dd>
+                </dl>
+            {% else %}
+                <span class="text-muted">No hay información de entrega asociada.</span>
+            {% endif %}
+
             <div class="row">
                 <div class="col-md-6">
                     <h5 class="mt-3">Datos del Cliente</h5>
@@ -83,23 +264,20 @@
                         {% endif %}
                     </ul>
                 </div>
-                {#
                 <div class="col-md-6">
-                    <h5 class="mt-3">Datos del Vehículo</h5>
-                    <ul class="list-group list-group-flush">
-                        {% if contrato.vehiculo %}
-                            <li class="list-group-item"><b>Patente:</b> {{ contrato.vehiculo.patente|default:contrato.vehiculo.placa }}</li>
-                            <li class="list-group-item"><b>Año:</b> {{ contrato.vehiculo.anio }}</li>
-                            <li class="list-group-item"><b>Tracción:</b> {{ contrato.vehiculo.traccion }}</li>
-                            <li class="list-group-item"><b>Combustible:</b> {{ contrato.vehiculo.combustible }}</li>
-                            <li class="list-group-item"><b>Capacidad de carga:</b> {{ contrato.vehiculo.capacidad_carga }}</li>
-                            <li class="list-group-item"><b>Color:</b> {{ contrato.vehiculo.color }}</li>
-                        {% else %}
-                            <li class="list-group-item text-muted">Sin datos de vehículo asociados.</li>
-                        {% endif %}
-                    </ul>
+                    <h5 class="mt-3">Información del Vehículo</h5>
+                    {% if contrato.vehiculo_visible %}
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item"><b>Patente:</b> {{ contrato.vehiculo_visible.patente }}</li>
+                            <li class="list-group-item"><b>Modelo:</b> {{ contrato.vehiculo_visible.modelo.nombre }}</li>
+                            <li class="list-group-item"><b>Marca:</b> {{ contrato.vehiculo_visible.modelo.marca.nombre }}</li>
+                            <li class="list-group-item"><b>Año:</b> {{ contrato.vehiculo_visible.anio_fabricacion }}</li>
+                            <li class="list-group-item"><b>Color:</b> {{ contrato.vehiculo_visible.color }}</li>
+                        </ul>
+                    {% else %}
+                        <span class="text-muted">Sin vehículo asociado.</span>
+                    {% endif %}
                 </div>
-                #}
             </div>
 
             {% if contrato.reserva %}

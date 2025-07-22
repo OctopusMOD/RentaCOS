@@ -1,101 +1,430 @@
 {% extends "base.html" %}
+{% load widget_tweaks %}
 {% load static %}
-{% block title %}Orden de Mantenimiento{% endblock %}
+
+{% block title %}Órden de Mantenimiento{% endblock %}
+
+{% block extra_head %}
+<style>
+    .orden-card {
+        border-radius: 1.25rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    .orden-section-title {
+        font-weight: bold;
+        font-size: 1.13rem;
+        color: #0d6efd;
+        letter-spacing: .5px;
+        margin-bottom: .7rem;
+        display: flex;
+        align-items: center;
+        gap: .5em;
+    }
+    .orden-section-title i {
+        color: #0d6efd;
+        margin-right: .15em;
+    }
+    .table th, .table td {
+        vertical-align: middle !important;
+    }
+    .table-hover tbody tr:hover {
+        background-color: #f7fbff;
+    }
+    .badge-ot {
+        font-size: 1.15rem;
+        background: #0056b3;
+        padding: .48em 1.2em;
+        border-radius: 2em;
+        letter-spacing: 1px;
+    }
+    .btn-add {
+        background: #0d6efd;
+        color: #fff;
+        border-radius: 1.3em;
+        font-weight: 500;
+        padding: .3em 1.2em;
+        transition: 0.2s;
+    }
+    .btn-add:hover {
+        background: #003b80;
+        color: #fff;
+    }
+    .orden-form-label {
+        font-weight: 500;
+        color: #0056b3;
+        margin-bottom: 0;
+    }
+    .orden-form-group {
+        margin-bottom: 1rem;
+    }
+    .orden-card .card-header {
+        background: #f3f8fa;
+        font-size: 1.05rem;
+        font-weight: bold;
+        color: #0056b3;
+    }
+    .table th {
+        background: #e9f1fa;
+        color: #0056b3;
+    }
+    .orden-form-section {
+        background: #f8fafc;
+        border-radius: 1rem;
+        padding: 1rem 1.5rem 1.5rem 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .input-group-text {
+        background: #e9f1fa;
+        color: #0056b3;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-
-<h2>Orden de Mantenimiento</h2>
-<form method="post">
-    {% csrf_token %}
-
-    <fieldset class="border p-3 mb-4">
-        <legend class="w-auto px-2">Datos Generales</legend>
-        {{ form.as_p }}
-        {% if form.instance.vehiculo %}
-        <div class="row">
-            <div class="col">Chasis/VIN: <b>{{ form.instance.vehiculo.chasis_vin }}</b></div>
-            <div class="col">Año: <b>{{ form.instance.vehiculo.anio }}</b></div>
-            <div class="col">Color: <b>{{ form.instance.vehiculo.color }}</b></div>
-            <div class="col">Marca: <b>{{ form.instance.vehiculo.marca }}</b></div>
-            <div class="col">Modelo: <b>{{ form.instance.vehiculo.modelo }}</b></div>
+<div class="container">
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-9">
+            <div class="card orden-card text-center mb-2">
+                <div class="card-body px-4 py-3">
+                    <h2 class="fw-bold mb-0"><i class="fa fa-wrench me-2"></i> Órden de Mantenimiento</h2>
+                </div>
+            </div>
         </div>
-        {% endif %}
-    </fieldset>
+        <div class="col-12 text-end mb-3">
+            <span class="badge badge-ot">
+                <i class="fa fa-hashtag"></i>
+                Nº OT: 
+                {% if form.instance.pk %}
+                    {{ form.instance.numero_orden }}
+                {% else %}
+                    <span id="preview-ot-numero">(Pendiente)</span>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+    <form method="post" autocomplete="off">
+        {% csrf_token %}
+        <div class="row g-4 mb-2">
+            <!-- Columna izquierda: Patente, Kilometraje, Taller, Tipo, Estado -->
+            <div class="col-md-4">
+                <div class="orden-form-section">
+                    <div class="orden-section-title"><i class="fa fa-id-card"></i> Detalles básicos</div>
+                    <div class="orden-form-group">
+                        <label class="orden-form-label" for="{{ form.vehiculo.id_for_label }}">
+                            <i class="fa fa-car"></i> {{ form.vehiculo.label }}
+                        </label>
+                        {{ form.vehiculo|add_class:"form-select" }}
+                    </div>
+                    <div class="orden-form-group">
+                        <label class="orden-form-label" for="{{ form.kilometraje_ingreso_mantenimiento.id_for_label }}">
+                          <i class="fa fa-tachometer"></i> {{ form.kilometraje_ingreso_mantenimiento.label }}
+                        </label>
+                        <div class="input-group">
+                            {{ form.kilometraje_ingreso_mantenimiento|add_class:"form-control" }}
+                            <span class="input-group-text">km</span>
+                        </div>
+                    </div>
+                    <div class="orden-form-group">
+                        <label class="orden-form-label" for="{{ form.taller.id_for_label }}">
+                          <i class="fa fa-warehouse"></i> {{ form.taller.label }}
+                        </label>
+                        {{ form.taller|add_class:"form-select" }}
+                    </div>
+                    <div class="orden-form-group">
+                        <label class="orden-form-label" for="{{ form.tipo.id_for_label }}">
+                          <i class="fa fa-tags"></i> {{ form.tipo.label }}
+                        </label>
+                        {{ form.tipo|add_class:"form-select" }}
+                    </div>
+                    <div class="orden-form-group">
+                        <label class="orden-form-label" for="{{ form.estado.id_for_label }}">
+                          <i class="fa fa-info-circle"></i> {{ form.estado.label }}
+                        </label>
+                        {{ form.estado|add_class:"form-select" }}
+                    </div>
+                </div>
+            </div>
+            <!-- Centro: Fechas y Observaciones -->
+            <div class="col-md-4">
+                <div class="orden-form-section mb-3">
+                    <div class="orden-section-title"><i class="fa fa-calendar"></i> Fechas</div>
+                    <div class="orden-form-group mb-2">
+                        <label class="orden-form-label" for="{{ form.fecha_ingreso.id_for_label }}">
+                          <i class="fa fa-sign-in"></i> {{ form.fecha_ingreso.label }}
+                        </label>
+                        {{ form.fecha_ingreso }}
+                    </div>
+                    <div class="orden-form-group">
+                        <label class="orden-form-label" for="{{ form.fecha_salida.id_for_label }}">
+                          <i class="fa fa-sign-out"></i> {{ form.fecha_salida.label }}
+                        </label>
+                        {{ form.fecha_salida }}
+                    </div>
+                </div>
+                <div class="card orden-card">
+                    <div class="card-header">
+                        <i class="fa fa-commenting"></i> Observaciones del Ingreso
+                    </div>
+                    <div class="card-body">
+                        {{ form.descripcion_problema|add_class:"form-control" }}
+                    </div>
+                </div>
+            </div>
+            <!-- Derecha: Datos informativos del vehículo -->
+            <div class="col-md-4">
+                <div class="card orden-card">
+                    <div class="card-header">
+                        <i class="fa fa-car"></i> Datos del Vehículo
+                    </div>
+                    <div class="card-body" id="vehiculo-info">
+                        <div id="info-basica">
+                            <span class="text-muted">Seleccione una patente para ver los datos.</span>
+                        </div>
+                        <div id="cliente-actual"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <h3>DEBUG FORMSETS</h3>
-    {{ trabajos_formset.management_form }}
-    {{ repuestos_formset.management_form }}
+        <!-- Tabla dinámica Trabajos Realizados -->
+        <div class="card orden-card mb-4">
+            <div class="card-header orden-section-title">
+                <i class="fa fa-cogs"></i> Trabajos Realizados
+            </div>
+            <div class="card-body p-0">
+                {{ trabajos_formset.management_form }}
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Descripción</th>
+                            <th>Componente</th>
+                            <th>Valor</th>
+                            <th>Unidades</th>
+                            <th>Valor Total</th>
+                            <th>Eliminar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trabajos-tbody">
+                        {% for form in trabajos_formset.forms %}
+                        <tr>
+                            <td>{{ form.codigo|add_class:"form-control" }}</td>
+                            <td>{{ form.descripcion|add_class:"form-control" }}</td>
+                            <td>{{ form.componente|add_class:"form-select" }}</td>
+                            <td>{{ form.valor|add_class:"form-control trabajo-valor" }}</td>
+                            <td>{{ form.unidades|add_class:"form-control trabajo-unidades" }}</td>
+                            <td>
+                                <input type="text" class="form-control trabajo-valor-total" readonly value="0">
+                            </td>
+                            <td>
+                                {% if trabajos_formset.can_delete %}
+                                    {% if form.instance.pk %}
+                                        {{ form.DELETE }}
+                                    {% else %}
+                                        <button type="button" class="btn btn-danger btn-sm remove-trabajo"><i class="fa fa-trash"></i></button>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="p-3 text-end">
+                    <button type="button" id="add-trabajo" class="btn btn-add btn-sm">
+                        <i class="fa fa-plus"></i> Agregar trabajo
+                    </button>
+                </div>
+            </div>
+        </div>
 
-    <fieldset class="border p-3 mb-4">
-        <legend>Trabajos Realizados</legend>
-        <table class="table table-bordered" id="trabajos-table">
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Descripción</th>
-                    <th>Unidades</th>
-                    <th>Valor</th>
-                    <th>Total</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody id="trabajos-tbody">
-            {% for form in trabajos_formset %}
-                <tr>
-                    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
-                    <td>{{ form.codigo }}</td>
-                    <td>{{ form.descripcion }}</td>
-                    <td>{{ form.unidades }}</td>
-                    <td>{{ form.valor_unitario }}</td>
-                    <td></td>
-                    <td>
-                        {% if trabajos_formset.can_delete %}
-                            {{ form.DELETE }} <button type="button" class="btn btn-danger btn-sm" onclick="deleteRow(this);">Eliminar</button>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        <button type="button" class="btn btn-success" onclick="addTrabajoRow();">Agregar línea</button>
-    </fieldset>
+        <!-- Repuestos utilizados -->
+        <div class="card orden-card mb-4">
+            <div class="card-header orden-section-title">
+                <i class="fa fa-wrench"></i> Repuestos Utilizados
+            </div>
+            <div class="card-body p-0">
+                {{ repuestos_formset.management_form }}
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Descripción</th>
+                            <th>Valor</th>
+                            <th>Unidades</th>
+                            <th>Valor Total</th>
+                            <th>Eliminar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="repuestos-tbody">
+                        {% for form in repuestos_formset.forms %}
+                        <tr>
+                            <td>{{ form.codigo|add_class:"form-control" }}</td>
+                            <td>{{ form.descripcion|add_class:"form-control" }}</td>
+                            <td>{{ form.valor|add_class:"form-control repuesto-valor" }}</td>
+                            <td>{{ form.unidades|add_class:"form-control repuesto-unidades" }}</td>
+                            <td>
+                                <input type="text" class="form-control repuesto-valor-total" readonly value="0">
+                            </td>
+                            <td>
+                                {% if repuestos_formset.can_delete %}
+                                    {% if form.instance.pk %}
+                                        {{ form.DELETE }}
+                                    {% else %}
+                                        <button type="button" class="btn btn-danger btn-sm remove-repuesto"><i class="fa fa-trash"></i></button>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="p-3 text-end">
+                    <button type="button" id="add-repuesto" class="btn btn-add btn-sm">
+                        <i class="fa fa-plus"></i> Agregar repuesto
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Botón guardar -->
+        <div class="row mb-4">
+            <div class="col text-center">
+                <button type="submit" class="btn btn-primary btn-lg px-5 shadow"><i class="fa fa-save"></i> Guardar Orden</button>
+            </div>
+        </div>
+    </form>
+</div>
 
-    <fieldset class="border p-3 mb-4">
-        <legend class="w-auto px-2">Repuestos/Insumos Utilizados</legend>
-        <table class="table table-bordered" id="repuestos-table">
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Descripción</th>
-                    <th>Unidades</th>
-                    <th>Valor</th>
-                    <th>Total</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody id="repuestos-tbody">
-            {% for form in repuestos_formset %}
-                <tr>
-                    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
-                    <td>{{ form.repuesto }}</td>
-                    <td></td>
-                    <td>{{ form.cantidad }}</td>
-                    <td>{{ form.valor_unitario }}</td>
-                    <td></td>
-                    <td>
-                        {% if repuestos_formset.can_delete %}
-                            {{ form.DELETE }} <button type="button" class="btn btn-danger btn-sm" onclick="deleteRow(this);">Eliminar</button>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        <button type="button" class="btn btn-success" onclick="addRepuestoRow();">Agregar línea</button>
-    </fieldset>
+{% endblock %}
 
-    <button type="submit" class="btn btn-primary">Guardar Orden</button>
-    <a href="{% url 'mantenimiento:orden_list' %}" class="btn btn-secondary">Cancelar</a>
-</form>
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // --- AJAX info vehículo ---
+    let vehiculoSelect = document.getElementById('id_vehiculo');
+    if (vehiculoSelect) {
+        vehiculoSelect.addEventListener('change', function() {
+            let vehiculoId = this.value;
+            let infoDiv = document.getElementById('info-basica');
+            let clienteDiv = document.getElementById('cliente-actual');
+            if (!vehiculoId) {
+                infoDiv.innerHTML = "<span class='text-muted'>Seleccione una patente para ver los datos.</span>";
+                clienteDiv.innerHTML = "";
+                return;
+            }
+            fetch("{% url 'mantenimiento:vehiculo_info' %}?vehiculo_id=" + vehiculoId)
+            .then(response => response.json())
+            .then(data => {
+                if(data.error) {
+                    infoDiv.innerHTML = "<span class='text-danger'>" + data.error + "</span>";
+                    clienteDiv.innerHTML = "";
+                } else {
+                    infoDiv.innerHTML = `<b>Patente:</b> ${data.patente} <br>
+                                         <b>Marca:</b> ${data.marca} <br>
+                                         <b>Modelo:</b> ${data.modelo} <br>
+                                         <b>Año modelo:</b> ${data.anio_modelo || '-'}<br>
+                                         <b>VIN/Chasis:</b> ${data.vin || '-'}`;
+                    clienteDiv.innerHTML = data.cliente ? `<b>Cliente actual:</b> <span class="text-primary">${data.cliente}</span>` : "";
+                }
+            });
+        });
+        // Si hay un valor seleccionado al cargar, dispara el evento
+        if (vehiculoSelect.value) {
+            vehiculoSelect.dispatchEvent(new Event('change'));
+        }
+    }
 
-<script src="{% static 'js/orden_mantenimiento_dinamico.js' %}"></script>
+    // --- Lógica dinámica para trabajos y repuestos ---
+    const componentes = [
+        "Motor", "Transmisión", "Chasis", "Suspensión", "Frenos", "Dirección", "Sistema Eléctrico",
+        "Carrocería", "Neumáticos", "Sistema de Escape", "Otro"
+    ];
+
+    function crearTrabajoRow(idx) {
+        let componenteOptions = componentes.map(
+            c => `<option value="${c}">${c}</option>`
+        ).join('');
+        return `
+        <tr>
+            <td><input type="text" name="trabajos-${idx}-codigo" class="form-control"></td>
+            <td><input type="text" name="trabajos-${idx}-descripcion" class="form-control"></td>
+            <td>
+                <select name="trabajos-${idx}-componente" class="form-select">
+                    ${componenteOptions}
+                </select>
+            </td>
+            <td><input type="number" name="trabajos-${idx}-valor" class="form-control trabajo-valor" min="0" value="0"></td>
+            <td><input type="number" name="trabajos-${idx}-unidades" class="form-control trabajo-unidades" min="0" value="0"></td>
+            <td><input type="text" name="trabajos-${idx}-valor_total" class="form-control trabajo-valor-total" readonly value="0"></td>
+            <td><button type="button" class="btn btn-danger btn-sm remove-trabajo"><i class="fa fa-trash"></i></button></td>
+        </tr>
+        `;
+    }
+
+    function crearRepuestoRow(idx) {
+        return `
+        <tr>
+            <td><input type="text" name="repuestos-${idx}-codigo" class="form-control"></td>
+            <td><input type="text" name="repuestos-${idx}-descripcion" class="form-control"></td>
+            <td><input type="number" name="repuestos-${idx}-valor" class="form-control repuesto-valor" min="0" value="0"></td>
+            <td><input type="number" name="repuestos-${idx}-unidades" class="form-control repuesto-unidades" min="0" value="0"></td>
+            <td><input type="text" name="repuestos-${idx}-valor_total" class="form-control repuesto-valor-total" readonly value="0"></td>
+            <td><button type="button" class="btn btn-danger btn-sm remove-repuesto"><i class="fa fa-trash"></i></button></td>
+        </tr>
+        `;
+    }
+
+    // TRABAJOS
+    let totalForms = document.getElementById('id_trabajos-TOTAL_FORMS');
+    let tbody = document.getElementById('trabajos-tbody');
+    if (totalForms && tbody) {
+        document.getElementById('add-trabajo').onclick = function() {
+            let idx = parseInt(totalForms.value);
+            tbody.insertAdjacentHTML('beforeend', crearTrabajoRow(idx));
+            totalForms.value = idx + 1;
+        };
+        tbody.addEventListener('click', function(e){
+            if(e.target && e.target.classList.contains('remove-trabajo')){
+                let row = e.target.closest('tr');
+                row.parentNode.removeChild(row);
+            }
+        });
+        tbody.addEventListener('input', function(e){
+            if(e.target.classList.contains('trabajo-valor') || e.target.classList.contains('trabajo-unidades')){
+                let row = e.target.closest('tr');
+                let valor = parseFloat(row.querySelector('.trabajo-valor').value) || 0;
+                let unidades = parseFloat(row.querySelector('.trabajo-unidades').value) || 0;
+                let total = valor * unidades;
+                row.querySelector('.trabajo-valor-total').value = total;
+            }
+        });
+    }
+
+    // REPUESTOS
+    let totalRepuestos = document.getElementById('id_repuestos-TOTAL_FORMS');
+    let repuestosTbody = document.getElementById('repuestos-tbody');
+    if (totalRepuestos && repuestosTbody) {
+        document.getElementById('add-repuesto').onclick = function() {
+            let idx = parseInt(totalRepuestos.value);
+            repuestosTbody.insertAdjacentHTML('beforeend', crearRepuestoRow(idx));
+            totalRepuestos.value = idx + 1;
+        };
+        repuestosTbody.addEventListener('click', function(e){
+            if(e.target && e.target.classList.contains('remove-repuesto')){
+                let row = e.target.closest('tr');
+                row.parentNode.removeChild(row);
+            }
+        });
+        repuestosTbody.addEventListener('input', function(e){
+            if(e.target.classList.contains('repuesto-valor') || e.target.classList.contains('repuesto-unidades')){
+                let row = e.target.closest('tr');
+                let valor = parseFloat(row.querySelector('.repuesto-valor').value) || 0;
+                let unidades = parseFloat(row.querySelector('.repuesto-unidades').value) || 0;
+                let total = valor * unidades;
+                row.querySelector('.repuesto-valor-total').value = total;
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
